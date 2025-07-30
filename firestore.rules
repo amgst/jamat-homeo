@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // WARNING: This rule is insecure and allows open access.
+    // It should be replaced with authenticated-only access for production.
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
