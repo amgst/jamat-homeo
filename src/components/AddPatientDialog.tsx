@@ -35,6 +35,8 @@ const formSchema = z.object({
   dob: z.string().refine((date) => new Date(date).toString() !== 'Invalid Date', {
     message: "Please enter a valid date of birth.",
   }),
+  patientNumber: z.string().optional(),
+  contactNumber: z.string().optional(),
 });
 
 type AddPatientDialogProps = {
@@ -49,6 +51,8 @@ export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
     defaultValues: {
       name: "",
       dob: "",
+      patientNumber: "",
+      contactNumber: "",
     },
   });
 
@@ -105,6 +109,32 @@ export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
                   <FormLabel>Date of Birth</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="patientNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Patient Number (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. P001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="contactNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Contact Number (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. +1234567890" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

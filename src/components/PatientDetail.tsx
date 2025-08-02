@@ -4,7 +4,6 @@ import { useState } from 'react';
 import type { Patient, Treatment } from '@/lib/types';
 import { TreatmentForm } from './TreatmentForm';
 import { TreatmentCard } from './TreatmentCard';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { Timestamp } from 'firebase/firestore';
 import { Button } from './ui/button';
@@ -101,29 +100,82 @@ export function PatientDetail({ patient, onUpdatePatient }: PatientDetailProps) 
     
     const dobFormatted = new Date(patient.dob).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 
+    // Get first and last treatment dates
+    const getFirstTreatmentDate = () => {
+        if (!patient.treatments || patient.treatments.length === 0) return null;
+        const sortedByDate = [...patient.treatments].sort((a, b) => {
+            const dateA = new Date(`${a.date}T${a.time}`);
+            const dateB = new Date(`${b.date}T${b.time}`);
+            return dateA.getTime() - dateB.getTime();
+        });
+        return sortedByDate[0];
+    };
+
+    const getLastTreatmentDate = () => {
+        if (!patient.treatments || patient.treatments.length === 0) return null;
+        const sortedByDate = [...patient.treatments].sort((a, b) => {
+            const dateA = new Date(`${a.date}T${a.time}`);
+            const dateB = new Date(`${b.date}T${b.time}`);
+            return dateB.getTime() - dateA.getTime();
+        });
+        return sortedByDate[0];
+    };
+
+    const firstTreatment = getFirstTreatmentDate();
+    const lastTreatment = getLastTreatmentDate();
+
   return (
     <div className="flex flex-col h-full">
-      <header className="p-6 border-b flex items-center justify-between bg-card/50 shrink-0 max-md:hidden">
-        <div className="flex items-center space-x-4">
-          <Avatar className="h-16 w-16">
-            {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.name} data-ai-hint="person" />}
-            <AvatarFallback>{patient.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-          </Avatar>
-          <div>
+      <header className="p-6 border-b flex items-start justify-between bg-card/50 shrink-0 max-md:hidden">
+        <div className="flex-1">
+          <div className="flex flex-col mb-4">
             <h1 className="text-3xl font-bold font-headline">{patient.name}</h1>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <p className="text-muted-foreground text-left">Age: {calculateAge(patient.dob)}</p>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>DOB: {dobFormatted}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {patient.patientNumber && (
+              <div className="bg-primary/10 px-3 py-1 rounded-lg mt-2 w-fit">
+                <span className="text-sm font-medium text-primary">Patient #: {patient.patientNumber}</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">Age</p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="font-medium text-left cursor-pointer">{calculateAge(patient.dob)} years</p>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>DOB: {dobFormatted}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            
+            {patient.contactNumber && (
+              <div>
+                <p className="text-muted-foreground">Contact</p>
+                <p className="font-medium">{patient.contactNumber}</p>
+              </div>
+            )}
+            
+            {firstTreatment && (
+              <div>
+                <p className="text-muted-foreground">First Visit</p>
+                <p className="font-medium">{new Date(firstTreatment.date).toLocaleDateString()}</p>
+              </div>
+            )}
+            
+            {lastTreatment && (
+              <div>
+                <p className="text-muted-foreground">Last Visit</p>
+                <p className="font-medium">{new Date(lastTreatment.date).toLocaleDateString()}</p>
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        
+        <div className="flex items-center gap-2 ml-6">
             <EditPatientDialog patient={patient} onUpdatePatient={onUpdatePatient} />
             <TooltipProvider>
             <Tooltip>

@@ -14,15 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { treatmentSuggestion } from '@/ai/flows/treatment-suggestion';
 
 import type { Patient, Treatment } from '@/lib/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Clock } from 'lucide-react';
 
 const formSchema = z.object({
-  date: z.string().refine((date) => !isNaN(Date.parse(date)), {
-    message: "Please enter a valid date.",
-  }),
-  time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: "Please enter a valid time in HH:mm format.",
-  }),
   observations: z.string().min(5, {
     message: "Observations must be at least 5 characters.",
   }),
@@ -42,8 +36,6 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().split(' ')[0].substring(0, 5),
       observations: "",
       remedy: "",
     },
@@ -84,58 +76,38 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
   };
   
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onAddTreatment(values);
+    // Auto-generate current date and time when saving
+    const now = new Date();
+    const treatmentData = {
+      ...values,
+      date: now.toISOString().split('T')[0],
+      time: now.toTimeString().split(' ')[0].substring(0, 5),
+    };
+    
+    onAddTreatment(treatmentData);
     form.reset({
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().split(' ')[0].substring(0, 5),
       observations: "",
       remedy: "",
     });
     setSuggestions([]);
     toast({
       title: "Treatment Added",
-      description: `A new treatment for ${patient.name} has been saved.`,
+      description: `A new treatment for ${patient.name} has been saved with current timestamp.`,
     });
   }
 
   return (
     <Card className="shadow-md">
       <CardHeader>
-        <CardTitle className="font-headline">Add New Treatment</CardTitle>
-        <CardDescription>Log a new treatment or observation for {patient.name}.</CardDescription>
+        <CardTitle className="font-headline flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          Add New Treatment
+        </CardTitle>
+        <CardDescription>Log a new treatment or observation for {patient.name}. Timestamp will be added automatically when saved.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="time"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Time</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
             <FormField
               control={form.control}
               name="observations"

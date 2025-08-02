@@ -11,5 +11,7 @@ export interface Patient {
   name: string;
   dob: string;
   avatarUrl: string;
+  patientNumber?: string;
+  contactNumber?: string;
   treatments: Treatment[];
 }
