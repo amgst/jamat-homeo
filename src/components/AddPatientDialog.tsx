@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserPlus } from 'lucide-react';
 import type { Patient } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -32,11 +33,26 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
-  dob: z.string().refine((date) => new Date(date).toString() !== 'Invalid Date', {
+  dob: z.string().min(1, {
+    message: "Please enter a date of birth.",
+  }).refine((date) => {
+    const parsedDate = new Date(date);
+    return !isNaN(parsedDate.getTime());
+  }, {
     message: "Please enter a valid date of birth.",
   }),
   patientNumber: z.string().optional(),
   contactNumber: z.string().optional(),
+  fatherName: z.string().optional(),
+  age: z.string().optional().refine((val) => {
+    if (!val) return true;
+    const num = parseInt(val);
+    return !isNaN(num) && num > 0 && num <= 150;
+  }, {
+    message: "Age must be a valid number between 1 and 150.",
+  }),
+  sex: z.enum(['Male', 'Female', 'Other']).optional(),
+  bloodGroup: z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']).optional(),
 });
 
 type AddPatientDialogProps = {
@@ -53,13 +69,27 @@ export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
       dob: "",
       patientNumber: "",
       contactNumber: "",
+      fatherName: "",
+      age: "",
+      sex: undefined,
+      bloodGroup: undefined,
     },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onAddPatient(values);
+    console.log('AddPatientDialog onSubmit called with:', values);
+    console.log('Form validation passed, calling onAddPatient...');
+    
+    // Convert age from string to number if provided
+    const patientData = {
+      ...values,
+      age: values.age ? parseInt(values.age) : undefined,
+    };
+    
+    onAddPatient(patientData);
     form.reset();
     setIsOpen(false);
+    console.log('Dialog closed and form reset');
   }
 
   return (
@@ -140,13 +170,88 @@ export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="fatherName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Father's Name (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. John Smith" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="age"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Age (Optional)</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g. 25" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sex"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sex (Optional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select sex" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bloodGroup"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Blood Group (Optional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select blood group" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="A+">A+</SelectItem>
+                      <SelectItem value="A-">A-</SelectItem>
+                      <SelectItem value="B+">B+</SelectItem>
+                      <SelectItem value="B-">B-</SelectItem>
+                      <SelectItem value="AB+">AB+</SelectItem>
+                      <SelectItem value="AB-">AB-</SelectItem>
+                      <SelectItem value="O+">O+</SelectItem>
+                      <SelectItem value="O-">O-</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="secondary">
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit">Save Patient</Button>
+              <Button type="submit" onClick={() => console.log('Save Patient button clicked')}>Save Patient</Button>
             </DialogFooter>
           </form>
         </Form>

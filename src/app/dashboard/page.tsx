@@ -60,18 +60,22 @@ export default function DashboardPage() {
     };
 
     const handleAddPatient = async (newPatientData: Omit<Patient, 'id' | 'treatments' | 'avatarUrl'>) => {
+        console.log('handleAddPatient called with:', newPatientData);
         try {
+            console.log('Attempting to add patient to Firestore...');
             const docRef = await addDoc(collection(db, "patients"), {
                 ...newPatientData,
                 avatarUrl: ``,
                 treatments: [],
             });
+            console.log('Patient added successfully with ID:', docRef.id);
             await fetchPatients();
             setSelectedPatientId(docRef.id);
             setIsPatientListOpen(false); // Close sheet on mobile after adding
-
+            console.log('Patient list updated and selected');
         } catch (error) {
             console.error("Error adding patient: ", error);
+            alert('Failed to add patient: ' + error.message);
         }
     };
 
