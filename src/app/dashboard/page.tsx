@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Patient } from '@/lib/types';
 import { isAuthenticated, logout } from '@/lib/auth';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc } from 'firebase/firestore';
 
 
 import { AddPatientDialog } from '@/components/AddPatientDialog';
@@ -29,6 +29,20 @@ export default function DashboardPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isAuth, setIsAuth] = useState(false);
     const [isPatientListOpen, setIsPatientListOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const handleDeletePatient = async (patientId: string) => {
+        setIsDeleting(true);
+        try {
+            await deleteDoc(doc(db, 'patients', patientId));
+            setPatients(prev => prev.filter(p => p.id !== patientId));
+            setSelectedPatientId(null);
+        } catch (error) {
+            console.error('Error deleting patient:', error);
+            alert('Failed to delete patient.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
 
     useEffect(() => {
@@ -75,7 +89,8 @@ export default function DashboardPage() {
             console.log('Patient list updated and selected');
         } catch (error) {
             console.error("Error adding patient: ", error);
-            alert('Failed to add patient: ' + error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            alert('Failed to add patient: ' + errorMessage);
         }
     };
 
@@ -200,7 +215,14 @@ export default function DashboardPage() {
                                            <AvatarFallback>{patient.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                                        </Avatar>
                                        <div className="overflow-hidden">
-                                           <p className="font-semibold truncate">{patient.name}</p>
+                                           <div className="flex items-center gap-2">
+                                               <p className="font-semibold truncate">{patient.name}</p>
+                                               {patient.patientNumber && (
+                                                   <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                                       {patient.patientNumber}
+                                                   </span>
+                                               )}
+                                           </div>
                                            <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob)}</p>
                                        </div>
                                    </button>
@@ -251,7 +273,7 @@ export default function DashboardPage() {
                             <p className="max-w-md">Fetching data from the secure database.</p>
                         </div>
                     ) : selectedPatient ? (
-                        <PatientDetail key={selectedPatient.id} patient={selectedPatient} onUpdatePatient={handleUpdatePatient} />
+                        <PatientDetail key={selectedPatient.id} patient={selectedPatient} onUpdatePatient={handleUpdatePatient} onDeletePatient={handleDeletePatient} isDeleting={isDeleting} />
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-center p-8 text-muted-foreground">
                             <div className="mb-4 rounded-full bg-accent/10 p-4 text-accent">

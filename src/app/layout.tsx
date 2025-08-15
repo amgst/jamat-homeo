@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'MediTrack Lite',
-  description: 'A simple app to track patient treatments.',
+  title: 'Haris Clinic',
+  description: 'Haris Clinic - Patient Management System',
 };
 
 export default function RootLayout({

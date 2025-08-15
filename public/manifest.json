@@ -1,7 +1,7 @@
 {
-  "name": "Homeo Patient",
-  "short_name": "Homeo",
-  "description": "Homeopathy Patient Management System",
+  "name": "Haris Clinic",
+  "short_name": "Haris Clinic",
+  "description": "Haris Clinic Patient Management System",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

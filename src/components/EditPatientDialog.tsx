@@ -32,8 +32,13 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
-  dob: z.string().refine((date) => new Date(date).toString() !== 'Invalid Date', {
-    message: "Please enter a valid date of birth.",
+  dob: z.string().optional(),
+  age: z.string().optional().refine((val) => {
+    if (!val) return true;
+    const num = parseInt(val);
+    return !isNaN(num) && num > 0 && num <= 150;
+  }, {
+    message: "Age must be a valid number between 1 and 150.",
   }),
   patientNumber: z.string().optional(),
   contactNumber: z.string().optional(),
@@ -51,7 +56,8 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: patient.name,
-      dob: patient.dob,
+      dob: patient.dob || "",
+      age: patient.age ? String(patient.age) : "",
       patientNumber: patient.patientNumber || "",
       contactNumber: patient.contactNumber || "",
     },
@@ -59,8 +65,9 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const updatedPatient = {
-        ...patient,
-        ...values,
+      ...patient,
+      ...values,
+      age: values.age ? parseInt(values.age) : undefined,
     }
     onUpdatePatient(updatedPatient);
     setIsOpen(false);
@@ -110,9 +117,22 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
               name="dob"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date of Birth</FormLabel>
+                  <FormLabel>Date of Birth (Optional)</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input placeholder="e.g. 1990-01-01" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="age"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Age (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. 25" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
