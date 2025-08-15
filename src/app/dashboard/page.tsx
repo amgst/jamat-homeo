@@ -76,9 +76,11 @@ export default function DashboardPage() {
     const handleAddPatient = async (newPatientData: Omit<Patient, 'id' | 'treatments' | 'avatarUrl'>) => {
         console.log('handleAddPatient called with:', newPatientData);
         try {
-            console.log('Attempting to add patient to Firestore...');
+            // Generate next patient number (sequential, two digits)
+            const nextNumber = (patients.length + 1).toString().padStart(2, '0');
             const docRef = await addDoc(collection(db, "patients"), {
                 ...newPatientData,
+                patientNumber: nextNumber,
                 avatarUrl: ``,
                 treatments: [],
             });
