@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { format } from 'date-fns';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Dialog,
   DialogContent,
@@ -27,12 +35,13 @@ import { Input } from '@/components/ui/input';
 import { Pencil } from 'lucide-react';
 import type { Patient } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
   }),
-  dob: z.string().optional(),
+  dob: z.date().optional(),
   age: z.string().optional().refine((val) => {
     if (!val) return true;
     const num = parseInt(val);
@@ -52,21 +61,43 @@ type EditPatientDialogProps = {
 export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   
+  // Function to calculate age from date of birth
+  const calculateAge = (dob: Date) => {
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age.toString();
+  };
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: patient.name,
-      dob: patient.dob || "",
+      dob: patient.dob ? new Date(patient.dob) : undefined,
       age: patient.age ? String(patient.age) : "",
       patientNumber: patient.patientNumber || "",
       contactNumber: patient.contactNumber || "",
     },
   });
 
+  // Watch for DOB changes to automatically calculate age
+  const watchedDob = form.watch('dob');
+  
+  useEffect(() => {
+    if (watchedDob) {
+      const calculatedAge = calculateAge(watchedDob);
+      form.setValue('age', calculatedAge);
+    }
+  }, [watchedDob, form]);
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     const updatedPatient = {
       ...patient,
       ...values,
+      dob: values.dob ? format(values.dob, 'yyyy-MM-dd') : patient.dob,
       age: values.age ? parseInt(values.age) : undefined,
     }
     onUpdatePatient(updatedPatient);
@@ -112,32 +143,67 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="dob"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date of Birth (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. 1990-01-01" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="age"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Age (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. 25" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="dob"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Date of Birth</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="age"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Age {watchedDob && "(Auto-calculated)"}</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g. 25" 
+                        {...field} 
+                        readOnly={!!watchedDob}
+                        className={watchedDob ? "bg-gray-50" : ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={form.control}
               name="patientNumber"
