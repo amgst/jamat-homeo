@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -43,6 +42,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import type { Patient } from "@/lib/types"
+
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -65,7 +66,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>
 
 interface AddPatientDialogProps {
-  onPatientAdded: () => void
+  onAddPatient: () => void;
 }
 
 const calculateAge = (birthDate: Date): number => {
@@ -79,7 +80,7 @@ const calculateDOBFromAge = (age: number): Date => {
   return new Date(birthYear, 0, 1) // January 1st
 }
 
-export function AddPatientDialog({ onPatientAdded }: AddPatientDialogProps) {
+export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
   const [open, setOpen] = useState(false)
   const [relation, setRelation] = useState<"father" | "husband">("father")
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
@@ -178,7 +179,7 @@ export function AddPatientDialog({ onPatientAdded }: AddPatientDialogProps) {
       
       form.reset()
       setOpen(false)
-      onPatientAdded()
+      onAddPatient()
     } catch (error) {
       console.error("Error adding patient:", error)
       toast({
@@ -252,33 +253,37 @@ export function AddPatientDialog({ onPatientAdded }: AddPatientDialogProps) {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Date of Birth</FormLabel>
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        type="date"
-                        value={field.value || ""}
-                        onChange={e => {
-                          field.onChange(e.target.value);
-                          // Accept string, convert to Date only for calculations
-                          if (e.target.value) {
-                            const dobString = e.target.value;
-                            if (/^\d{4}-\d{2}-\d{2}$/.test(dobString)) {
-                              const [year, month, day] = dobString.split('-').map(Number);
-                              const dobDate = new Date(year, month - 1, day);
-                              if (!isNaN(dobDate.getTime())) {
-                                const today = new Date();
-                                let age = today.getFullYear() - dobDate.getFullYear();
-                                const m = today.getMonth() - dobDate.getMonth();
-                                if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
-                                  age--;
-                                }
-                                form.setValue("age", age > 0 ? String(age) : "");
-                              }
-                            }
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
                           }
-                        }}
-                        className="w-full"
-                      />
-                    </div>
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -294,21 +299,7 @@ export function AddPatientDialog({ onPatientAdded }: AddPatientDialogProps) {
                       <Input
                         type="number"
                         placeholder="Enter age"
-                        value={field.value || ""}
-                        onChange={e => {
-                          field.onChange(e.target.value);
-                          // Accept string/number, convert to DOB string if valid
-                          const ageNum = parseInt(e.target.value);
-                          if (!isNaN(ageNum) && ageNum > 0 && ageNum < 150) {
-                            const today = new Date();
-                            const birthYear = today.getFullYear() - ageNum;
-                            // Use Jan 1 for simplicity
-                            const dobIso = `${birthYear}-01-01`;
-                            form.setValue("dob", dobIso);
-                          }
-                        }}
-                        min="0"
-                        max="150"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -414,8 +405,6 @@ export function AddPatientDialog({ onPatientAdded }: AddPatientDialogProps) {
                 )}
               />
             </div>
-
-            {/* ... existing code ... */}
             
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
