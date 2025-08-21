@@ -46,17 +46,19 @@ import type { Patient } from "@/lib/types"
 
 
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  contactNumber: z.string().min(10, "Contact number must be at least 10 digits"),
-  fatherName: z.string().optional(),
-  husbandName: z.string().optional(),
+  name: z.string().min(2, {
+    message: "Name must be at least 2 characters.",
+  }),
+  sex: z.string().min(1, {
+    message: "Sex is required.",
+  }),
   dob: z.date().optional(),
   age: z.string().optional(),
-  sex: z.enum(["Male", "Female", "Other"]),
-  bloodGroup: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+  contactNumber: z.string().optional(),
+  fatherName: z.string().optional(),
+  husbandName: z.string().optional(),
   address: z.string().optional(),
   occupation: z.string().optional(),
-  maritalStatus: z.enum(["Single", "Married", "Divorced", "Widowed"]).optional(),
   emergencyContact: z.string().optional(),
   medicalHistory: z.string().optional(),
   allergies: z.string().optional(),
@@ -67,29 +69,27 @@ type FormData = z.infer<typeof formSchema>
 
 interface AddPatientDialogProps {
   onAddPatient: () => void;
+  existingPatients: Patient[];
 }
 
 const calculateAge = (birthDate: Date): number => {
   return differenceInYears(new Date(), birthDate)
 }
 
-const calculateDOBFromAge = (age: number): Date => {
-  // Use January 1st of the calculated year
-  const currentYear = new Date().getFullYear()
-  const birthYear = currentYear - age
-  return new Date(birthYear, 0, 1) // January 1st
-}
+// Removed calculateDOBFromAge function as it was causing controlled/uncontrolled input issues
 
-export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
+export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientDialogProps) {
   const [open, setOpen] = useState(false)
   const [relation, setRelation] = useState<"father" | "husband">("father")
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
-  const [isUpdatingFromToggle, setIsUpdatingFromToggle] = useState(false)
+  // Removed isUpdatingFromToggle state as it's no longer needed
+  const [ageInputMode, setAgeInputMode] = useState<"dob" | "age">("dob")
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      sex: "Male",
       contactNumber: "",
       fatherName: "",
       husbandName: "",
@@ -103,55 +103,34 @@ export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
     },
   })
 
-  // Handle DOB changes to calculate age
-  useEffect(() => {
-    if (isUpdatingFromToggle) return
-    
-    const subscription = form.watch((value, { name }) => {
-      if (name === "dob" && value.dob) {
-        const calculatedAge = calculateAge(value.dob)
-        setIsUpdatingFromToggle(true)
-        form.setValue("age", calculatedAge.toString())
-        setTimeout(() => setIsUpdatingFromToggle(false), 0)
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [form, isUpdatingFromToggle])
+  // Removed DOB change handler to prevent controlled/uncontrolled input warnings
 
-  // Handle age changes to calculate DOB
+  // Handle mode switching
   useEffect(() => {
-    if (isUpdatingFromToggle) return
-    
-    const subscription = form.watch((value, { name }) => {
-      if (name === "age" && value.age && !isNaN(Number(value.age))) {
-        const ageNum = Number(value.age)
-        if (ageNum > 0 && ageNum < 150) {
-          const calculatedDOB = calculateDOBFromAge(ageNum)
-          setIsUpdatingFromToggle(true)
-          form.setValue("dob", calculatedDOB)
-          setTimeout(() => setIsUpdatingFromToggle(false), 0)
-        }
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [form, isUpdatingFromToggle])
+    if (ageInputMode === "age") {
+      form.setValue("dob", undefined)
+    } else {
+      form.setValue("age", "")
+    }
+  }, [ageInputMode, form])
 
-  const generatePatientNumber = () => {
-    const timestamp = Date.now().toString()
-    return `P${timestamp.slice(-6)}`
+  const generatePatientNumber = (existingPatients: Patient[]) => {
+    // Get all existing patient numbers and find the highest number
+    const existingNumbers = existingPatients
+      .map(p => p.patientNumber)
+      .filter(num => num && num.match(/^P\d+$/i))
+      .map(num => parseInt(num!.substring(1)))
+      .filter(num => !isNaN(num))
+    
+    const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0
+    const nextNumber = maxNumber + 1
+    
+    return `P${nextNumber.toString().padStart(2, '0')}`
   }
 
   const onSubmit = async (data: FormData) => {
     try {
-      // Validate that either age or dob is provided
-      if (!data.age && !data.dob) {
-        toast({
-          title: "Error",
-          description: "Please provide either age or date of birth",
-          variant: "destructive",
-        })
-        return
-      }
+      // Age and DOB are now optional - no validation required
 
       // Remove empty optional fields
       const cleanedData = Object.fromEntries(
@@ -163,11 +142,16 @@ export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
         })
       )
 
-      const patientData = {
+      const patientData: any = {
         ...cleanedData,
-        patientNumber: generatePatientNumber(),
+        patientNumber: generatePatientNumber(existingPatients),
         createdAt: new Date(),
         updatedAt: new Date(),
+      }
+
+      // Only include dob if it exists
+      if (cleanedData.dob) {
+        patientData.dob = format(cleanedData.dob as Date, 'yyyy-MM-dd')
       }
 
       await addDoc(collection(db, "patients"), patientData)
@@ -246,69 +230,102 @@ export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="dob"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date of Birth</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          captionLayout="dropdown-buttons"
-                          fromYear={1900}
-                          toYear={new Date().getFullYear()}
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <FormLabel>Age Information</FormLabel>
+                <div className="flex gap-2 p-1 bg-muted rounded-lg">
+                  <Button
+                    type="button"
+                    variant={ageInputMode === "dob" ? "default" : "ghost"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setAgeInputMode("dob")}
+                  >
+                    Date of Birth
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={ageInputMode === "age" ? "default" : "ghost"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setAgeInputMode("age")}
+                  >
+                    Direct Age
+                  </Button>
+                </div>
+              </div>
 
-              <FormField
-                control={form.control}
-                name="age"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Age</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Enter age"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {ageInputMode === "dob" ? (
+                <FormField
+                  control={form.control}
+                  name="dob"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Date of Birth</FormLabel>
+                      <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value && field.value instanceof Date && !isNaN(field.value.getTime()) ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            captionLayout="dropdown-buttons"
+                            fromYear={1900}
+                            toYear={new Date().getFullYear()}
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                      {field.value && (
+                        <p className="text-sm text-muted-foreground">
+                          Age: {calculateAge(field.value)} years
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="age"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Age (in years)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="Enter age"
+                          min="0"
+                          max="150"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -382,7 +399,7 @@ export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
 
               <FormField
                 control={form.control}
-                name="bloodGroup"
+                name="medicalHistory"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Blood Group</FormLabel>

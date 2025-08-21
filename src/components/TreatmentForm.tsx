@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-// import { treatmentSuggestion } from '@/ai/flows/treatment-suggestion';
+import { treatmentSuggestion } from '@/ai/flows/treatment-suggestion';
 
 import type { Patient, Treatment } from '@/lib/types';
 import { Loader2, Clock } from 'lucide-react';
@@ -55,15 +55,13 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
       const patientDetails = `Name: ${patient.name}, DOB: ${patient.dob}`;
       const treatmentHistory = patient.treatments?.map(t => `${t.date}: ${t.observations}`).join('\n') || "No prior treatments recorded.";
       
-      // const result = await treatmentSuggestion({
-      //   patientDetails,
-      //   treatmentContext: treatmentHistory,
-      //   query,
-      // });
+      const result = await treatmentSuggestion({
+        patientDetails,
+        treatmentContext: treatmentHistory,
+        query,
+      });
 
-      // Temporarily disabled AI suggestions for build
-      setSuggestions(["AI suggestions temporarily disabled"]);
-      // setSuggestions(result.suggestions || []);
+      setSuggestions(result.suggestions || []);
     } catch (error) {
       console.error("AI suggestion error:", error);
       toast({

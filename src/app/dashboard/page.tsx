@@ -27,9 +27,13 @@ export default function DashboardPage() {
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
-    const [isAuth, setIsAuth] = useState(false);
-    const [isPatientListOpen, setIsPatientListOpen] = useState(false);
+    const [isClient, setIsClient] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
     const handleDeletePatient = async (patientId: string) => {
         setIsDeleting(true);
         try {
@@ -44,16 +48,17 @@ export default function DashboardPage() {
         }
     };
 
+    const isAuth = isClient && isAuthenticated();
 
     useEffect(() => {
-        const auth = isAuthenticated();
-        setIsAuth(auth);
-        if (!auth) {
-            router.replace('/login');
-        } else {
-            fetchPatients();
+        if (isClient) {
+            if (!isAuth) {
+                router.replace('/login');
+            } else {
+                fetchPatients();
+            }
         }
-    }, [router]);
+    }, [isClient, isAuth, router]);
 
     const fetchPatients = async () => {
         setIsLoading(true);
@@ -73,27 +78,9 @@ export default function DashboardPage() {
         }
     };
 
-    const handleAddPatient = async (newPatientData: Omit<Patient, 'id' | 'treatments' | 'avatarUrl'>) => {
-        console.log('handleAddPatient called with:', newPatientData);
-        try {
-            // Generate next patient number (sequential, two digits)
-            const nextNumber = (patients.length + 1).toString().padStart(2, '0');
-            const docRef = await addDoc(collection(db, "patients"), {
-                ...newPatientData,
-                patientNumber: nextNumber,
-                avatarUrl: ``,
-                treatments: [],
-            });
-            console.log('Patient added successfully with ID:', docRef.id);
-            await fetchPatients();
-            setSelectedPatientId(docRef.id);
-            setIsPatientListOpen(false); // Close sheet on mobile after adding
-            console.log('Patient list updated and selected');
-        } catch (error) {
-            console.error("Error adding patient: ", error);
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-            alert('Failed to add patient: ' + errorMessage);
-        }
+    const handleAddPatient = async () => {
+        // Refresh the patients list after adding
+        await fetchPatients();
     };
 
     const handleUpdatePatient = async (updatedPatient: Patient) => {
@@ -116,15 +103,24 @@ export default function DashboardPage() {
         router.replace('/login');
     };
     
-    const calculateAge = (dobString: string) => {
-        const dob = new Date(dobString);
-        const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const m = today.getMonth() - dob.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-            age--;
+    const calculateAge = (dobString: string, ageValue?: number) => {
+        if (dobString) {
+            const dob = new Date(dobString);
+            if (!isNaN(dob.getTime())) {
+                const today = new Date();
+                let age = today.getFullYear() - dob.getFullYear();
+                const m = today.getMonth() - dob.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                }
+                return age;
+            }
         }
-        return age;
+        // Fallback to age field if DOB is not available
+        if (ageValue !== undefined && ageValue !== null) {
+            return ageValue;
+        }
+        return 'N/A';
     };
 
     const filteredPatients = useMemo(() => {
@@ -143,11 +139,18 @@ export default function DashboardPage() {
 
     const handleSelectPatient = (patientId: string) => {
         setSelectedPatientId(patientId);
-        setIsPatientListOpen(false); // Close sheet on mobile after selection
     }
-    
-    if (!isAuth) {
-        return null; // or a loading spinner
+
+    if (!isClient || !isAuth) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8 text-muted-foreground">
+               <div className="mb-4 rounded-full bg-accent/10 p-4 text-accent">
+                  <Stethoscope className="h-16 w-16 animate-pulse"/>
+                </div>
+                <h2 className="text-2xl font-headline text-foreground">Loading Dashboard...</h2>
+                <p className="max-w-md">Please wait a moment.</p>
+            </div>
+        );
     }
 
     const PatientListContent = () => (
@@ -155,7 +158,7 @@ export default function DashboardPage() {
             <header className="p-4 border-b flex justify-between items-center shrink-0">
                 <Logo />
                 <div className="flex items-center gap-2">
-                  <AddPatientDialog onAddPatient={handleAddPatient} />
+                  <AddPatientDialog onAddPatient={handleAddPatient} existingPatients={patients} />
                    <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -225,7 +228,7 @@ export default function DashboardPage() {
                                                    </span>
                                                )}
                                            </div>
-                                           <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob)}</p>
+                                           <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob, patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob, patient.age)} years`}</p>
                                        </div>
                                    </button>
                                </li>
@@ -246,7 +249,7 @@ export default function DashboardPage() {
             <main className="flex-1 flex flex-col overflow-y-auto">
                 {/* Mobile Header */}
                 <header className="md:hidden flex items-center justify-between p-4 border-b">
-                     <Sheet open={isPatientListOpen} onOpenChange={setIsPatientListOpen}>
+                     <Sheet>
                         <SheetTrigger asChild>
                             <Button variant="outline" size="icon">
                                 <PanelLeft className="h-5 w-5" />

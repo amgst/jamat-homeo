@@ -8,13 +8,13 @@ const AUTH_KEY = 'meditrack_auth';
 
 export const login = (pin: string): boolean => {
   if (pin === CORRECT_PIN) {
-    // In a real app, you'd use a more secure session management method.
-    // sessionStorage is used here for simplicity. It clears when the browser tab is closed.
+    // Using localStorage to persist authentication across browser sessions
+    // so users don't need to enter PIN every time
     try {
-      sessionStorage.setItem(AUTH_KEY, 'true');
+      localStorage.setItem(AUTH_KEY, 'true');
       return true;
     } catch (error) {
-      console.error("Could not set session storage:", error);
+      console.error("Could not set local storage:", error);
       return false;
     }
   }
@@ -23,17 +23,17 @@ export const login = (pin: string): boolean => {
 
 export const logout = (): void => {
   try {
-    sessionStorage.removeItem(AUTH_KEY);
+    localStorage.removeItem(AUTH_KEY);
   } catch (error) {
-    console.error("Could not remove session storage item:", error);
+    console.error("Could not remove local storage item:", error);
   }
 };
 
 export const isAuthenticated = (): boolean => {
   try {
-    return sessionStorage.getItem(AUTH_KEY) === 'true';
+    return localStorage.getItem(AUTH_KEY) === 'true';
   } catch (error) {
-    console.error("Could not read from session storage:", error);
+    console.error("Could not read from local storage:", error);
     return false;
   }
 };

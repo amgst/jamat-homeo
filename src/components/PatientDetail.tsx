@@ -8,7 +8,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Timestamp } from 'firebase/firestore';
 import { Button } from './ui/button';
 import { BookText, Loader2, Pencil } from 'lucide-react';
-// import { summarizeTreatmentHistory } from '@/ai/flows/summarize-treatment';
+import { summarizeTreatmentHistory } from '@/ai/flows/summarize-treatment';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -69,11 +69,8 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
         .map(t => `Date: ${t.date} ${t.time}\nRemedy: ${t.remedy || 'N/A'}\nObservations: ${t.observations}`)
         .join('\n\n---\n\n');
       
-      // const result = await summarizeTreatmentHistory({ patientDetails, treatmentHistory });
-      // setSummary(result.summary);
-      
-      // Temporarily disabled AI summary for build
-      setSummary("AI treatment summary temporarily disabled for production build.");
+      const result = await summarizeTreatmentHistory({ patientDetails, treatmentHistory });
+      setSummary(result.summary);
 
     } catch (error) {
       console.error("AI summary error:", error);
@@ -93,18 +90,27 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
         return dateB.getTime() - dateA.getTime();
     });
 
-    const calculateAge = (dobString: string) => {
-        const dob = new Date(dobString);
-        const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const m = today.getMonth() - dob.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-            age--;
+    const calculateAge = (dobString: string, ageValue?: number) => {
+        if (dobString) {
+            const dob = new Date(dobString);
+            if (!isNaN(dob.getTime())) {
+                const today = new Date();
+                let age = today.getFullYear() - dob.getFullYear();
+                const m = today.getMonth() - dob.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                }
+                return age;
+            }
         }
-        return age;
+        // Fallback to age field if DOB is not available
+        if (ageValue !== undefined && ageValue !== null) {
+            return ageValue;
+        }
+        return 'N/A';
     };
     
-    const dobFormatted = new Date(patient.dob).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+    const dobFormatted = patient.dob ? new Date(patient.dob).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : 'N/A';
 
     // Get first and last treatment dates
     const getFirstTreatmentDate = () => {
@@ -149,7 +155,7 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <p className="font-medium text-left cursor-pointer">{calculateAge(patient.dob)} years</p>
+                    <p className="font-medium text-left cursor-pointer">{calculateAge(patient.dob, patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob, patient.age)} years`}</p>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>DOB: {dobFormatted}</p>
@@ -168,14 +174,14 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
             {firstTreatment && (
               <div>
                 <p className="text-muted-foreground">First Visit</p>
-                <p className="font-medium">{new Date(firstTreatment.date).toLocaleDateString()}</p>
+                <p className="font-medium">{firstTreatment.date ? new Date(firstTreatment.date).toLocaleDateString() : 'N/A'}</p>
               </div>
             )}
             
             {lastTreatment && (
               <div>
                 <p className="text-muted-foreground">Last Visit</p>
-                <p className="font-medium">{new Date(lastTreatment.date).toLocaleDateString()}</p>
+                <p className="font-medium">{lastTreatment.date ? new Date(lastTreatment.date).toLocaleDateString() : 'N/A'}</p>
               </div>
             )}
           </div>
@@ -252,7 +258,7 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
                     {sortedTreatments.map((treatment, index) => (
                       <tr key={treatment.id || index} className="border-b">
                         <td className="px-4 py-2">
-                          <div>{new Date(treatment.date).toLocaleDateString()}</div>
+                          <div>{treatment.date ? new Date(treatment.date).toLocaleDateString() : 'N/A'}</div>
                           <div className="text-xs text-muted-foreground mt-1">{treatment.time}</div>
                         </td>
                         <td className="px-4 py-2">{treatment.remedy || '-'}</td>
