@@ -274,6 +274,9 @@ export function AddPatientDialog({ onAddPatient }: AddPatientDialogProps) {
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
+                          captionLayout="dropdown-buttons"
+                          fromYear={1900}
+                          toYear={new Date().getFullYear()}
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
