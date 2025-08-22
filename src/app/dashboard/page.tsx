@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserPlus, Search, Stethoscope, LogOut, PanelLeft } from 'lucide-react';
+import { UserPlus, Search, Stethoscope, LogOut, PanelLeft, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,6 +29,8 @@ export default function DashboardPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [sortBy, setSortBy] = useState<'name' | 'patientNumber' | 'dateAdded'>('patientNumber');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => {
         setIsClient(true);
@@ -123,15 +125,49 @@ export default function DashboardPage() {
         return 'N/A';
     };
 
-    const filteredPatients = useMemo(() => {
-        if (!searchQuery) return patients;
-        const lowercasedQuery = searchQuery.toLowerCase();
-        return patients.filter(patient => 
-            patient.name.toLowerCase().includes(lowercasedQuery) ||
-            patient.dob.includes(lowercasedQuery) ||
-            (patient.treatments && patient.treatments.some(t => t.observations.toLowerCase().includes(lowercasedQuery)))
-        );
-    }, [patients, searchQuery]);
+    const filteredAndSortedPatients = useMemo(() => {
+        let filtered = patients;
+        
+        // Apply search filter
+        if (searchQuery) {
+            const lowercasedQuery = searchQuery.toLowerCase();
+            filtered = patients.filter(patient => 
+                patient.name.toLowerCase().includes(lowercasedQuery) ||
+                patient.dob.includes(lowercasedQuery) ||
+                (patient.patientNumber && patient.patientNumber.toLowerCase().includes(lowercasedQuery)) ||
+                (patient.treatments && patient.treatments.some(t => t.observations.toLowerCase().includes(lowercasedQuery)))
+            );
+        }
+        
+        // Apply sorting
+        const sorted = [...filtered].sort((a, b) => {
+            let aValue: string | number;
+            let bValue: string | number;
+            
+            switch (sortBy) {
+                case 'name':
+                    aValue = a.name.toLowerCase();
+                    bValue = b.name.toLowerCase();
+                    break;
+                case 'patientNumber':
+                    aValue = a.patientNumber || '';
+                    bValue = b.patientNumber || '';
+                    break;
+                case 'dateAdded':
+                    aValue = a.id; // Using ID as proxy for date added
+                    bValue = b.id;
+                    break;
+                default:
+                    return 0;
+            }
+            
+            if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+        
+        return sorted;
+    }, [patients, searchQuery, sortBy, sortOrder]);
 
     const selectedPatient = useMemo(() => {
         return patients.find(p => p.id === selectedPatientId) ?? null;
@@ -140,6 +176,20 @@ export default function DashboardPage() {
     const handleSelectPatient = (patientId: string) => {
         setSelectedPatientId(patientId);
     }
+    
+    const handleSort = (newSortBy: 'name' | 'patientNumber' | 'dateAdded') => {
+        if (sortBy === newSortBy) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(newSortBy);
+            setSortOrder('asc');
+        }
+    };
+    
+    const getSortIcon = (field: 'name' | 'patientNumber' | 'dateAdded') => {
+        if (sortBy !== field) return <ArrowUpDown className="h-3 w-3" />;
+        return sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+    };
 
     if (!isClient || !isAuth) {
         return (
@@ -176,7 +226,7 @@ export default function DashboardPage() {
             </header>
             
             <div className="p-4 shrink-0">
-                <div className="relative">
+                <div className="relative mb-3">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                         placeholder="Search patients..." 
@@ -184,6 +234,34 @@ export default function DashboardPage() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
+                </div>
+                
+                {/* Sort Controls */}
+                <div className="flex gap-1 text-xs">
+                    <Button 
+                        variant={sortBy === 'patientNumber' ? 'secondary' : 'ghost'} 
+                        size="sm" 
+                        onClick={() => handleSort('patientNumber')}
+                        className="h-7 px-2 text-xs"
+                    >
+                        ID {getSortIcon('patientNumber')}
+                    </Button>
+                    <Button 
+                        variant={sortBy === 'name' ? 'secondary' : 'ghost'} 
+                        size="sm" 
+                        onClick={() => handleSort('name')}
+                        className="h-7 px-2 text-xs"
+                    >
+                        Name {getSortIcon('name')}
+                    </Button>
+                    <Button 
+                        variant={sortBy === 'dateAdded' ? 'secondary' : 'ghost'} 
+                        size="sm" 
+                        onClick={() => handleSort('dateAdded')}
+                        className="h-7 px-2 text-xs"
+                    >
+                        Added {getSortIcon('dateAdded')}
+                    </Button>
                 </div>
             </div>
 
@@ -203,7 +281,7 @@ export default function DashboardPage() {
                         </ul>
                     ) : (
                          <ul className="space-y-1">
-                           {filteredPatients.map(patient => (
+                           {filteredAndSortedPatients.map(patient => (
                                <li key={patient.id}>
                                    <button
                                       onClick={() => handleSelectPatient(patient.id)}
@@ -216,17 +294,12 @@ export default function DashboardPage() {
                                       aria-current={selectedPatientId === patient.id}
                                    >
                                        <Avatar className="h-10 w-10">
-                                           {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.name} data-ai-hint="person" />}
-                                           <AvatarFallback>{patient.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                           {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.patientNumber || patient.name} data-ai-hint="person" />}
+                                           <AvatarFallback>{patient.patientNumber || patient.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                                        </Avatar>
                                        <div className="overflow-hidden">
                                            <div className="flex items-center gap-2">
                                                <p className="font-semibold truncate">{patient.name}</p>
-                                               {patient.patientNumber && (
-                                                   <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                                       {patient.patientNumber}
-                                                   </span>
-                                               )}
                                            </div>
                                            <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob, patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob, patient.age)} years`}</p>
                                        </div>

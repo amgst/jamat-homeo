@@ -7,7 +7,7 @@ import { TreatmentCard } from './TreatmentCard';
 import { ScrollArea } from './ui/scroll-area';
 import { Timestamp } from 'firebase/firestore';
 import { Button } from './ui/button';
-import { BookText, Loader2, Pencil } from 'lucide-react';
+import { BookText, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { summarizeTreatmentHistory } from '@/ai/flows/summarize-treatment';
 import {
   AlertDialog,
@@ -17,10 +17,12 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogCancel,
+  AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { EditPatientDialog } from './EditPatientDialog';
+import { EditTreatmentDialog } from './EditTreatmentDialog';
 
 
 export type PatientDetailProps = {
@@ -32,6 +34,8 @@ export type PatientDetailProps = {
 
 export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDeleting }: PatientDetailProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteTreatmentDialog, setShowDeleteTreatmentDialog] = useState(false);
+  const [treatmentToDelete, setTreatmentToDelete] = useState<string | null>(null);
   const { toast } = useToast();
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
@@ -50,6 +54,46 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
     };
 
     onUpdatePatient(updatedPatient);
+  };
+
+  const handleUpdateTreatment = (updatedTreatment: Treatment) => {
+    const updatedTreatments = (patient.treatments || []).map(treatment => 
+      treatment.id === updatedTreatment.id ? updatedTreatment : treatment
+    );
+
+    const updatedPatient: Patient = {
+      ...patient,
+      treatments: updatedTreatments,
+    };
+
+    onUpdatePatient(updatedPatient);
+  };
+
+  const handleDeleteTreatment = (treatmentId: string) => {
+    setTreatmentToDelete(treatmentId);
+    setShowDeleteTreatmentDialog(true);
+  };
+
+  const confirmDeleteTreatment = () => {
+    if (!treatmentToDelete) return;
+    
+    const updatedTreatments = (patient.treatments || []).filter(treatment => 
+      treatment.id !== treatmentToDelete
+    );
+
+    const updatedPatient: Patient = {
+      ...patient,
+      treatments: updatedTreatments,
+    };
+
+    onUpdatePatient(updatedPatient);
+    setShowDeleteTreatmentDialog(false);
+    setTreatmentToDelete(null);
+    
+    toast({
+      title: "Treatment Deleted",
+      description: "The treatment record has been successfully deleted.",
+    });
   };
   
   const handleSummarize = async () => {
@@ -252,6 +296,7 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
                       <th className="px-4 py-2 text-left">Date & Time</th>
                       <th className="px-4 py-2 text-left">Remedy</th>
                       <th className="px-4 py-2 text-left">Observations</th>
+                      <th className="px-4 py-2 text-left w-20">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -263,6 +308,22 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
                         </td>
                         <td className="px-4 py-2">{treatment.remedy || '-'}</td>
                         <td className="px-4 py-2 whitespace-pre-wrap">{treatment.observations}</td>
+                        <td className="px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <EditTreatmentDialog 
+                              treatment={treatment} 
+                              onUpdateTreatment={handleUpdateTreatment} 
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteTreatment(treatment.id)}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -277,6 +338,31 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
           </div>
         </div>
       </ScrollArea>
+      
+      <AlertDialog open={showDeleteTreatmentDialog} onOpenChange={setShowDeleteTreatmentDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Treatment Record</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this treatment record? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteTreatmentDialog(false);
+              setTreatmentToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteTreatment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       <AlertDialog open={!!summary} onOpenChange={(open) => !open && setSummary(null)}>
         <AlertDialogContent className="max-w-2xl">
