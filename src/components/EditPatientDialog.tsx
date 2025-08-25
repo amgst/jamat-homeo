@@ -36,19 +36,15 @@ import { Pencil } from 'lucide-react';
 import type { Patient } from '@/lib/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
+  name: z.string().min(1, {
+    message: "Name is required.",
   }),
   dob: z.date().optional(),
   age: z.string().optional(),
-  patientNumber: z.string().optional().refine((val) => {
-    if (!val) return true;
-    return /^P\d{2,}$/i.test(val);
-  }, {
-    message: "Patient number must be in format P01, P02, etc.",
-  }),
+  patientNumber: z.string().optional(),
   contactNumber: z.string().optional(),
 });
 
@@ -60,16 +56,19 @@ type EditPatientDialogProps = {
 export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [ageInputMode, setAgeInputMode] = useState<"dob" | "age">(patient.dob ? "dob" : "age");
+  const { toast } = useToast();
   
-  // Function to calculate age from date of birth
-  const calculateAge = (dob: Date) => {
+  // Function to calculate age from date of birth (Date or ISO string)
+  const calculateAge = (dobInput: Date | string) => {
+    const dob = dobInput instanceof Date ? dobInput : new Date(dobInput);
+    if (isNaN(dob.getTime())) return '';
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
     const monthDiff = today.getMonth() - dob.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
       age--;
     }
-    return age.toString();
+    return String(age);
   };
   
   const form = useForm<z.infer<typeof formSchema>>({
@@ -83,38 +82,67 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
     },
   });
 
-  // Watch for DOB changes to automatically calculate age (only in DOB mode)
   const watchedDob = form.watch('dob');
+  const watchedName = form.watch('name');
   
+  // Debug: Log form values when they change
   useEffect(() => {
-    if (watchedDob && ageInputMode === 'dob') {
-      const calculatedAge = calculateAge(watchedDob);
-      form.setValue('age', calculatedAge);
-    }
-  }, [watchedDob, form, ageInputMode]);
+    console.log('Form name value changed:', watchedName);
+  }, [watchedName]);
 
-  // Handle mode switching
+  // Debug: Log form state changes
   useEffect(() => {
-    if (ageInputMode === "age") {
-      form.setValue("dob", undefined);
-    } else {
-      form.setValue("age", "");
+    console.log('Form state changed:', {
+      isValid: form.formState.isValid,
+      errors: form.formState.errors,
+      isDirty: form.formState.isDirty,
+      isSubmitting: form.formState.isSubmitting
+    });
+  }, [form.formState]);
+  
+  // No auto-sync between DOB and Age; only display computed age when DOB is present
+
+  // Keep mode via toggle; no auto switching
+
+  // Reset form when patient changes or dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({
+        name: patient.name,
+        dob: patient.dob ? new Date(patient.dob) : undefined,
+        age: patient.age ? String(patient.age) : "",
+        patientNumber: patient.patientNumber || "",
+        contactNumber: patient.contactNumber || "",
+      });
+      setAgeInputMode(patient.dob ? "dob" : "age");
     }
-  }, [ageInputMode, form]);
+  }, [patient, form, isOpen]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log('=== onSubmit called ===');
+    console.log('Form values:', values);
+    console.log('Original patient:', patient);
+    
+    const hasDob = Boolean(values.dob && values.dob instanceof Date && !isNaN((values.dob as Date).getTime()));
     const updatedPatient = {
       ...patient,
       ...values,
-      dob: values.dob && values.dob instanceof Date && !isNaN(values.dob.getTime()) ? format(values.dob, 'yyyy-MM-dd') : patient.dob,
-      age: values.age ? parseInt(values.age) : undefined,
+      // Save only the active mode's value
+      dob: ageInputMode === 'dob' && hasDob ? format(values.dob as Date, 'yyyy-MM-dd') : undefined,
+      age: ageInputMode === 'age' ? (values.age ? parseInt(values.age) : undefined) : undefined,
     }
+    
+    console.log('Updated patient:', updatedPatient);
     onUpdatePatient(updatedPatient);
     setIsOpen(false);
+    toast({
+      title: "Patient Updated",
+      description: "Patient information has been successfully updated.",
+    });
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen} key={patient.id}>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -138,7 +166,9 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.log('Form validation errors:', errors);
+          })} className="space-y-4 py-4">
             <FormField
               control={form.control}
               name="name"
@@ -146,7 +176,14 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
                 <FormItem>
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. John Doe" {...field} />
+                    <Input 
+                      placeholder="e.g. John Doe" 
+                      {...field} 
+                      onChange={(e) => {
+                        console.log('Name field changed:', e.target.value);
+                        field.onChange(e);
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -177,76 +214,76 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
                 </div>
               </div>
 
-              {ageInputMode === "dob" ? (
-                <FormField
-                  control={form.control}
-                  name="dob"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Date of Birth</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value && field.value instanceof Date && !isNaN(field.value.getTime()) ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            captionLayout="dropdown-buttons"
-                            fromYear={1900}
-                            toYear={new Date().getFullYear()}
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                      {field.value && (
-                        <p className="text-sm text-muted-foreground">
-                          Age: {calculateAge(field.value)} years
-                        </p>
-                      )}
-                    </FormItem>
-                  )}
-                />
-              ) : (
-                <FormField
-                  control={form.control}
-                  name="age"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Age (in years)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number"
-                          placeholder="Enter age" 
-                          min="0"
-                          max="150"
-                          {...field} 
+              {ageInputMode === 'dob' ? (
+              <FormField
+                control={form.control}
+                name="dob"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Date of Birth</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value && field.value instanceof Date && !isNaN(field.value.getTime()) ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          captionLayout="dropdown-buttons"
+                          fromYear={1900}
+                          toYear={new Date().getFullYear()}
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                          }
+                          initialFocus
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    {field.value instanceof Date && !isNaN(field.value.getTime()) && (
+                      <p className="text-sm text-muted-foreground">
+                        Age: {calculateAge(field.value)} years
+                      </p>
+                    )}
+                  </FormItem>
+                )}
+              />
+              ) : (
+              <FormField
+                control={form.control}
+                name="age"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Age (in years)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number"
+                        placeholder="Enter age" 
+                        min="0"
+                        max="150"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               )}
             </div>
             <FormField
@@ -281,7 +318,17 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit">Save Changes</Button>
+              <Button 
+                type="submit"
+                onClick={() => {
+                  console.log('Save button clicked');
+                  console.log('Current form values:', form.getValues());
+                  console.log('Form is valid:', form.formState.isValid);
+                  console.log('Form errors:', form.formState.errors);
+                }}
+              >
+                Save Changes
+              </Button>
             </DialogFooter>
           </form>
         </Form>

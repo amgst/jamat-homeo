@@ -20,9 +20,11 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
     const router = useRouter();
+    const { toast } = useToast();
     const [patients, setPatients] = useState<Patient[]>([]);
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -87,16 +89,32 @@ export default function DashboardPage() {
 
     const handleUpdatePatient = async (updatedPatient: Patient) => {
          try {
+            console.log('handleUpdatePatient called with:', updatedPatient);
             const patientRef = doc(db, "patients", updatedPatient.id);
             const { id, ...patientData } = updatedPatient;
-            await updateDoc(patientRef, patientData);
+            // Remove undefined values so Firestore doesn't receive them
+            const sanitizedData = Object.fromEntries(
+                Object.entries(patientData).filter(([_, v]) => v !== undefined)
+            ) as Omit<Patient, 'id'>;
+            console.log('Patient data to update:', sanitizedData);
+            await updateDoc(patientRef, sanitizedData);
             
             setPatients(prev => prev.map(p => p.id === updatedPatient.id ? updatedPatient : p));
              if (selectedPatientId !== updatedPatient.id) {
                 setSelectedPatientId(updatedPatient.id);
             }
+            console.log('Patient updated successfully');
+            toast({
+                title: "Patient Updated",
+                description: "Patient information has been successfully updated.",
+            });
         } catch (error) {
             console.error("Error updating patient: ", error);
+            toast({
+                title: "Update Failed",
+                description: "Failed to update patient information. Please try again.",
+                variant: "destructive",
+            });
         }
     };
     
