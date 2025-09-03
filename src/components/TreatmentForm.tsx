@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { treatmentSuggestion } from '@/ai/flows/treatment-suggestion';
 
@@ -21,6 +22,7 @@ const formSchema = z.object({
     message: "Observations must be at least 5 characters.",
   }),
   remedy: z.string().optional(),
+  dosage: z.string().optional(),
 });
 
 type TreatmentFormProps = {
@@ -38,6 +40,7 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
     defaultValues: {
       observations: "",
       remedy: "",
+      dosage: "",
     },
   });
 
@@ -88,6 +91,7 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
     form.reset({
       observations: "",
       remedy: "",
+      dosage: "",
     });
     setSuggestions([]);
     toast({
@@ -171,6 +175,33 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                 </div>
               </div>
             )}
+
+            <FormField
+              control={form.control}
+              name="dosage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dosage Instructions</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select dosage frequency" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="OD">OD - Once daily</SelectItem>
+                      <SelectItem value="BD">BD - Twice daily</SelectItem>
+                      <SelectItem value="TDS">TDS - Three times daily</SelectItem>
+                      <SelectItem value="QDS">QDS - Four times daily</SelectItem>
+                      <SelectItem value="HS">HS - At bedtime</SelectItem>
+                      <SelectItem value="SOS">SOS - As needed</SelectItem>
+                      <SelectItem value="STAT">STAT - Immediately</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="flex justify-end">
               <Button type="submit" disabled={form.formState.isSubmitting}>

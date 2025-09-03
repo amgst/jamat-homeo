@@ -52,12 +52,20 @@ export function TreatmentCard({ treatment, onUpdateTreatment, onDeleteTreatment 
                 </div>
             </div>
         </div>
-        {treatment.remedy && (
-            <CardDescription className="flex items-center gap-2 pt-1">
-                <span className="font-semibold text-foreground">Remedy:</span>
-                <span className="font-medium text-foreground">{treatment.remedy}</span>
-            </CardDescription>
-        )}
+        <div className="space-y-1">
+            {treatment.remedy && (
+                <CardDescription className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">Remedy:</span>
+                    <span className="font-medium text-foreground">{treatment.remedy}</span>
+                </CardDescription>
+            )}
+            {treatment.dosage && (
+                <CardDescription className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">Dosage:</span>
+                    <span className="font-medium text-foreground">{treatment.dosage}</span>
+                </CardDescription>
+            )}
+        </div>
       </CardHeader>
       <CardContent>
         <p className="whitespace-pre-wrap">{treatment.observations}</p>

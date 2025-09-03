@@ -4,6 +4,7 @@ export interface Treatment {
   time: string;
   observations: string;
   remedy?: string;
+  dosage?: string;
 }
 
 export interface Medicine {
