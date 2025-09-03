@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserPlus, Search, Stethoscope, LogOut, PanelLeft, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { UserPlus, Search, Stethoscope, LogOut, PanelLeft, ArrowUpDown, ArrowUp, ArrowDown, Pill } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -230,6 +230,19 @@ export default function DashboardPage() {
                    <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => router.push('/medicines')} className="text-muted-foreground hover:text-foreground">
+                                    <Pill className="h-5 w-5" />
+                                    <span className="sr-only">Medicines</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                            <p>Medicines</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                   <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
                                     <LogOut className="h-5 w-5" />
                                     <span className="sr-only">Logout</span>
@@ -332,53 +345,106 @@ export default function DashboardPage() {
     );
 
     return (
-        <div className="grid md:grid-cols-[350px_1fr] h-full bg-background font-body text-foreground">
-            <aside className="hidden md:flex md:flex-col md:border-r">
-                <PatientListContent />
-            </aside>
-            
-            <main className="flex-1 flex flex-col overflow-y-auto">
-                {/* Mobile Header */}
-                <header className="md:hidden flex items-center justify-between p-4 border-b">
-                     <Sheet>
-                        <SheetTrigger asChild>
-                            <Button variant="outline" size="icon">
-                                <PanelLeft className="h-5 w-5" />
-                                <span className="sr-only">Show Patients</span>
+        <div className="min-h-screen bg-background">
+            <header className="border-b bg-card/50">
+                <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <Logo />
+                        <div className="flex gap-2">
+                            <Button variant="secondary">
+                                Patients
                             </Button>
-                        </SheetTrigger>
-                        <SheetContent side="left" className="p-0 w-[320px]">
-                            <SheetTitle className="sr-only">Patient List</SheetTitle>
-                            <SheetDescription className="sr-only">A list of all patients in the system.</SheetDescription>
-                            <PatientListContent />
-                        </SheetContent>
-                    </Sheet>
-                    <div className="text-lg font-bold">
-                        {selectedPatient ? selectedPatient.name : 'Select Patient'}
+                            <Button variant="ghost" onClick={() => router.push('/medicines')}>
+                                Medicines
+                            </Button>
+                        </div>
                     </div>
-                    <div className="w-10"></div>
-                </header>
-            
-                <div className="flex-1 overflow-y-auto">
-                    {isLoading && !selectedPatient ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center p-8 text-muted-foreground">
-                           <div className="mb-4 rounded-full bg-accent/10 p-4 text-accent">
-                              <Stethoscope className="h-16 w-16 animate-pulse"/>
+                    <Button variant="ghost" size="icon" onClick={handleLogout}>
+                        <LogOut className="h-5 w-5" />
+                    </Button>
+                </div>
+            </header>
+
+            <main className="container mx-auto px-4 py-6">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 className="text-3xl font-bold">Patient Management</h1>
+                        <p className="text-muted-foreground">Manage your patients</p>
+                    </div>
+                    <AddPatientDialog onAddPatient={handleAddPatient} existingPatients={patients} />
+                </div>
+
+                <div className="mb-6">
+                    <div className="relative mb-3">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Search patients..." 
+                            className="pl-10" 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    
+                    <div className="flex gap-1 text-xs">
+                        <Button 
+                            variant={sortBy === 'patientNumber' ? 'secondary' : 'ghost'} 
+                            size="sm" 
+                            onClick={() => handleSort('patientNumber')}
+                            className="h-7 px-2 text-xs"
+                        >
+                            ID {getSortIcon('patientNumber')}
+                        </Button>
+                        <Button 
+                            variant={sortBy === 'name' ? 'secondary' : 'ghost'} 
+                            size="sm" 
+                            onClick={() => handleSort('name')}
+                            className="h-7 px-2 text-xs"
+                        >
+                            Name {getSortIcon('name')}
+                        </Button>
+                        <Button 
+                            variant={sortBy === 'dateAdded' ? 'secondary' : 'ghost'} 
+                            size="sm" 
+                            onClick={() => handleSort('dateAdded')}
+                            className="h-7 px-2 text-xs"
+                        >
+                            Added {getSortIcon('dateAdded')}
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6">
+                    <div className="space-y-4">
+                        {filteredAndSortedPatients.map(patient => (
+                            <div key={patient.id} className={`border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                                selectedPatientId === patient.id ? 'bg-accent border-accent-foreground' : ''
+                            }`} onClick={() => handleSelectPatient(patient.id)}>
+                                <div className="flex items-center space-x-3">
+                                    <Avatar className="h-12 w-12">
+                                        {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.patientNumber || patient.name} />}
+                                        <AvatarFallback>{patient.patientNumber || patient.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <h3 className="font-semibold">{patient.name}</h3>
+                                        <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob, patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob, patient.age)} years`}</p>
+                                        {patient.patientNumber && <p className="text-xs text-muted-foreground">ID: {patient.patientNumber}</p>}
+                                    </div>
+                                </div>
                             </div>
-                            <h2 className="text-2xl font-headline text-foreground">Loading Patients...</h2>
-                            <p className="max-w-md">Fetching data from the secure database.</p>
-                        </div>
-                    ) : selectedPatient ? (
-                        <PatientDetail key={selectedPatient.id} patient={selectedPatient} onUpdatePatient={handleUpdatePatient} onDeletePatient={handleDeletePatient} isDeleting={isDeleting} />
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center p-8 text-muted-foreground">
-                            <div className="mb-4 rounded-full bg-accent/10 p-4 text-accent">
-                              <Stethoscope className="h-16 w-16 "/>
+                        ))}
+                    </div>
+
+                    <div>
+                        {selectedPatient ? (
+                            <PatientDetail key={selectedPatient.id} patient={selectedPatient} onUpdatePatient={handleUpdatePatient} onDeletePatient={handleDeletePatient} isDeleting={isDeleting} />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-64 text-center p-8 text-muted-foreground border rounded-lg">
+                                <Stethoscope className="h-16 w-16 mb-4" />
+                                <h3 className="text-lg font-semibold">Select a patient</h3>
+                                <p>Choose a patient from the list to see their details</p>
                             </div>
-                            <h2 className="text-2xl font-headline text-foreground">Select a patient</h2>
-                            <p className="max-w-md">Choose a patient from the list to see their details, or add a new patient to get started.</p>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </main>
         </div>

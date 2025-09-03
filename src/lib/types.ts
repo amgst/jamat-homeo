@@ -6,6 +6,18 @@ export interface Treatment {
   remedy?: string;
 }
 
+export interface Medicine {
+  id: string;
+  name: string;
+  stock: number;
+  unit: string;
+  expiryDate?: string;
+  batchNumber?: string;
+  manufacturer?: string;
+  price?: number;
+  minStockLevel?: number;
+}
+
 export interface Patient {
   id: string;
   name: string;
