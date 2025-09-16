@@ -1,6 +1,8 @@
-"use client";
 
-import { useState, useMemo, useEffect } from 'react';
+"use client";
+export const dynamic = "force-dynamic";
+
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Patient } from '@/lib/types';
 import { isAuthenticated, logout } from '@/lib/auth';
@@ -23,6 +25,14 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from 
 import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardPageContent />
+    </Suspense>
+  );
+}
+
+function DashboardPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { toast } = useToast();
