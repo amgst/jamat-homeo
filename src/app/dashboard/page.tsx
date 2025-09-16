@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import type { Patient } from '@/lib/types';
 import { isAuthenticated, logout } from '@/lib/auth';
 import { db } from '@/lib/firebase';
@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
     const [patients, setPatients] = useState<Patient[]>([]);
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -33,10 +34,28 @@ export default function DashboardPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [sortBy, setSortBy] = useState<'name' | 'patientNumber' | 'dateAdded'>('patientNumber');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [shouldOpenEditDialog, setShouldOpenEditDialog] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const patientsPerPage = 10;
 
     useEffect(() => {
         setIsClient(true);
     }, []);
+
+    // Handle URL parameters for patient selection and edit mode
+    useEffect(() => {
+        if (isClient) {
+            const patientId = searchParams.get('patientId');
+            const editMode = searchParams.get('edit') === 'true';
+            
+            if (patientId) {
+                setSelectedPatientId(patientId);
+                if (editMode) {
+                    setShouldOpenEditDialog(true);
+                }
+            }
+        }
+    }, [searchParams, isClient]);
 
     const handleDeletePatient = async (patientId: string) => {
         setIsDeleting(true);
@@ -151,14 +170,14 @@ export default function DashboardPage() {
             const lowercasedQuery = searchQuery.toLowerCase();
             filtered = patients.filter(patient => 
                 patient.name.toLowerCase().includes(lowercasedQuery) ||
-                patient.dob.includes(lowercasedQuery) ||
+                patient.dob?.includes(lowercasedQuery) ||
                 (patient.patientNumber && patient.patientNumber.toLowerCase().includes(lowercasedQuery)) ||
                 (patient.treatments && patient.treatments.some(t => t.observations.toLowerCase().includes(lowercasedQuery)))
             );
         }
         
         // Apply sorting
-        const sorted = [...filtered].sort((a, b) => {
+        return [...filtered].sort((a, b) => {
             let aValue: string | number;
             let bValue: string | number;
             
@@ -183,9 +202,18 @@ export default function DashboardPage() {
             if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
             return 0;
         });
-        
-        return sorted;
     }, [patients, searchQuery, sortBy, sortOrder]);
+
+    // Calculate paginated patients and total pages
+    const paginatedPatients = useMemo(() => {
+        const startIndex = (currentPage - 1) * patientsPerPage;
+        const endIndex = startIndex + patientsPerPage;
+        return filteredAndSortedPatients.slice(startIndex, endIndex);
+    }, [filteredAndSortedPatients, currentPage]);
+
+    const totalPages = useMemo(() => {
+        return Math.ceil(filteredAndSortedPatients.length / patientsPerPage);
+    }, [filteredAndSortedPatients]);
 
     const selectedPatient = useMemo(() => {
         return patients.find(p => p.id === selectedPatientId) ?? null;
@@ -224,9 +252,24 @@ export default function DashboardPage() {
     const PatientListContent = () => (
         <div className="flex flex-col bg-card/50 h-full">
             <header className="p-4 border-b flex justify-between items-center shrink-0">
-                <Logo />
+                <div className="cursor-pointer" onClick={() => router.push('/')}>
+                    <Logo />
+                </div>
                 <div className="flex items-center gap-2">
                   <AddPatientDialog onAddPatient={handleAddPatient} existingPatients={patients} />
+                   <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => router.push('/patients')} className="text-muted-foreground hover:text-foreground">
+                                    <PanelLeft className="h-5 w-5" />
+                                    <span className="sr-only">Patient List</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                            <p>Patient List</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                    <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -326,13 +369,13 @@ export default function DashboardPage() {
                                    >
                                        <Avatar className="h-10 w-10">
                                            {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.patientNumber || patient.name} data-ai-hint="person" />}
-                                           <AvatarFallback>{patient.patientNumber || patient.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                           <AvatarFallback>{patient.patientNumber || patient.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
                                        </Avatar>
                                        <div className="overflow-hidden">
                                            <div className="flex items-center gap-2">
                                                <p className="font-semibold truncate">{patient.name}</p>
                                            </div>
-                                           <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob, patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob, patient.age)} years`}</p>
+                                           <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob || '', patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob || '', patient.age)} years`}</p>
                                        </div>
                                    </button>
                                </li>
@@ -349,10 +392,15 @@ export default function DashboardPage() {
             <header className="border-b bg-card/50">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                        <Logo />
+                        <div className="cursor-pointer" onClick={() => router.push('/')}>
+                            <Logo />
+                        </div>
                         <div className="flex gap-2">
                             <Button variant="secondary">
                                 Patients
+                            </Button>
+                            <Button variant="ghost" onClick={() => router.push('/patients')}>
+                                Patient List
                             </Button>
                             <Button variant="ghost" onClick={() => router.push('/medicines')}>
                                 Medicines
@@ -415,23 +463,50 @@ export default function DashboardPage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6">
                     <div className="space-y-4">
-                        {filteredAndSortedPatients.map(patient => (
+                        {paginatedPatients.map((patient: Patient) => (
                             <div key={patient.id} className={`border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
                                 selectedPatientId === patient.id ? 'bg-accent border-accent-foreground' : ''
                             }`} onClick={() => handleSelectPatient(patient.id)}>
                                 <div className="flex items-center space-x-3">
                                     <Avatar className="h-12 w-12">
                                         {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.patientNumber || patient.name} />}
-                                        <AvatarFallback>{patient.patientNumber || patient.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                        <AvatarFallback>{patient.patientNumber || patient.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
                                     </Avatar>
                                     <div>
                                         <h3 className="font-semibold">{patient.name}</h3>
-                                        <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob, patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob, patient.age)} years`}</p>
+                                        <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob || '', patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob || '', patient.age)} years`}</p>
                                         {patient.patientNumber && <p className="text-xs text-muted-foreground">ID: {patient.patientNumber}</p>}
                                     </div>
                                 </div>
                             </div>
                         ))}
+                        
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between border-t pt-4">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    Previous
+                                </Button>
+                                
+                                <div className="text-sm text-muted-foreground">
+                                    Page {currentPage} of {totalPages}
+                                </div>
+                                
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        )}
                     </div>
 
                     <div>

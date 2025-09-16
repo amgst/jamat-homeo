@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Patient, Treatment } from '@/lib/types';
 import { TreatmentForm } from './TreatmentForm';
 import { TreatmentCard } from './TreatmentCard';
@@ -36,9 +36,23 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDeleteTreatmentDialog, setShowDeleteTreatmentDialog] = useState(false);
   const [treatmentToDelete, setTreatmentToDelete] = useState<string | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const { toast } = useToast();
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
+
+  // Open edit dialog when component mounts if requested
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const editMode = urlParams.get('edit') === 'true';
+    if (editMode) {
+      setShowEditDialog(true);
+      // Remove the edit parameter from URL without reloading the page
+      urlParams.delete('edit');
+      const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
 
   const handleAddTreatment = (newTreatmentData: Omit<Treatment, 'id'>) => {
     // Firestore uses Timestamps for dates, so let's be consistent
@@ -199,7 +213,7 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <p className="font-medium text-left cursor-pointer">{calculateAge(patient.dob, patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob, patient.age)} years`}</p>
+                    <p className="font-medium text-left cursor-pointer">{calculateAge(patient.dob || '', patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob || '', patient.age)} years`}</p>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>DOB: {dobFormatted}</p>
@@ -232,7 +246,6 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
         </div>
         
         <div className="flex items-center gap-2 ml-6">
-            <EditPatientDialog patient={patient} onUpdatePatient={onUpdatePatient} />
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -251,7 +264,9 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
                 <TooltipTrigger asChild>
                   <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)} disabled={isDeleting}>
                     <span className="sr-only">Delete Patient</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -259,28 +274,11 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Patient</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <span className="font-bold">{patient.name}</span>? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting} onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
-            <Button variant="destructive" disabled={isDeleting} onClick={() => {
-              if (onDeletePatient) onDeletePatient(patient.id);
-              setShowDeleteDialog(false);
-            }}>
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
         </div>
       </header>
+      
+      {/* Edit Patient Dialog */}
+      <EditPatientDialog patient={patient} onUpdatePatient={onUpdatePatient} />
       
       <ScrollArea className="flex-1">
         <div className="p-6 space-y-8">

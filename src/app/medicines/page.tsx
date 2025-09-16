@@ -142,7 +142,9 @@ export default function MedicinesPage() {
             <header className="border-b bg-card/50">
                 <div className="container mx-auto px-4 py-4 flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                        <Logo />
+                        <div className="cursor-pointer" onClick={() => router.push('/')}>
+                            <Logo />
+                        </div>
                         <div className="flex gap-2">
                             <Button variant="ghost" onClick={() => router.push('/dashboard')}>
                                 Patients

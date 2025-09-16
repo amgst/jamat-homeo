@@ -56,7 +56,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full bg-background">
-      <div className="mb-8">
+      <div className="mb-8 cursor-pointer" onClick={() => router.push('/')}>
         <Logo />
       </div>
       <Card className="w-full max-w-sm shadow-2xl">
