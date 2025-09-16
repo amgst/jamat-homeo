@@ -7,7 +7,7 @@ import { TreatmentCard } from './TreatmentCard';
 import { ScrollArea } from './ui/scroll-area';
 import { Timestamp } from 'firebase/firestore';
 import { Button } from './ui/button';
-import { BookText, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { BookText, Loader2, Trash2 } from 'lucide-react';
 import { summarizeTreatmentHistory } from '@/ai/flows/summarize-treatment';
 import {
   AlertDialog,
@@ -36,10 +36,10 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDeleteTreatmentDialog, setShowDeleteTreatmentDialog] = useState(false);
   const [treatmentToDelete, setTreatmentToDelete] = useState<string | null>(null);
-  const [showEditDialog, setShowEditDialog] = useState(false);
   const { toast } = useToast();
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Open edit dialog when component mounts if requested
   useEffect(() => {
@@ -52,6 +52,17 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
       const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
       window.history.replaceState({}, '', newUrl);
     }
+    
+    // Listen for custom event to open edit dialog
+    const handleOpenEditDialog = () => {
+      setShowEditDialog(true);
+    };
+
+    window.addEventListener('openEditDialog', handleOpenEditDialog);
+
+    return () => {
+      window.removeEventListener('openEditDialog', handleOpenEditDialog);
+    };
   }, []);
 
   const handleAddTreatment = (newTreatmentData: Omit<Treatment, 'id'>) => {
@@ -260,6 +271,7 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
               </Tooltip>
             </TooltipProvider>
             <TooltipProvider>
+            
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)} disabled={isDeleting}>
@@ -276,10 +288,7 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
             </TooltipProvider>
         </div>
       </header>
-      
-      {/* Edit Patient Dialog */}
-      <EditPatientDialog patient={patient} onUpdatePatient={onUpdatePatient} />
-      
+  {/* EditPatientDialog Removed */}
       <ScrollArea className="flex-1">
         <div className="p-6 space-y-8">
           <TreatmentForm patient={patient} onAddTreatment={handleAddTreatment} />
@@ -375,6 +384,11 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <EditPatientDialog 
+        patient={patient} 
+        onUpdatePatient={onUpdatePatient}
+      />
     </div>
   );
 }

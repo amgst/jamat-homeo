@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,9 +13,26 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { treatmentSuggestion } from '@/ai/flows/treatment-suggestion';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
 
-import type { Patient, Treatment } from '@/lib/types';
-import { Loader2, Clock } from 'lucide-react';
+import type { Patient, Treatment, Medicine } from '@/lib/types';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { Loader2, Clock, Pill } from 'lucide-react';
 
 const formSchema = z.object({
   observations: z.string().min(5, {
@@ -34,6 +51,11 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
   const { toast } = useToast();
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [isLoadingMedicines, setIsLoadingMedicines] = useState(false);
+  // Track selected medicines and their dosages
+  const [showMedicineModal, setShowMedicineModal] = useState(false);
+  const [medicineRows, setMedicineRows] = useState<Array<{ id: string; name: string; selected: boolean; dosage: string }>>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -43,6 +65,46 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
       dosage: "",
     },
   });
+
+  // Fetch medicines from Firestore
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      setIsLoadingMedicines(true);
+      try {
+        const medicinesCollection = collection(db, 'medicines');
+        const q = query(medicinesCollection, orderBy('name'));
+        const medicinesSnapshot = await getDocs(q);
+        const medicinesList = medicinesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name || '',
+            stock: data.stock || 0,
+            unit: data.unit || '',
+            expiryDate: data.expiryDate,
+            batchNumber: data.batchNumber,
+            manufacturer: data.manufacturer,
+            price: data.price,
+            minStockLevel: data.minStockLevel
+          } as Medicine;
+        });
+        console.log('Fetched medicines:', medicinesList); // Debug log
+        setMedicines(medicinesList);
+  setMedicineRows(medicinesList.map((m, idx) => ({ id: m.id, name: m.name, selected: false, dosage: '' })));
+      } catch (error) {
+        console.error("Error fetching medicines:", error);
+        toast({
+          variant: "destructive",
+          title: "Error Loading Medicines",
+          description: "Could not load medicine inventory. Please try again later.",
+        });
+      } finally {
+        setIsLoadingMedicines(false);
+      }
+    };
+
+    fetchMedicines();
+  }, []);
 
   const handleObservationsChange = async (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const query = event.target.value;
@@ -81,24 +143,43 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
   function onSubmit(values: z.infer<typeof formSchema>) {
     // Auto-generate current date and time when saving
     const now = new Date();
+    // Get selected medicines and their dosages
+    const selectedRows = medicineRows.filter(row => row.selected);
+    // Format: MedicineName (DosageAbbr)
+    const selectedMedicineText = selectedRows.map(row => `${row.name}${row.dosage ? ` (${row.dosage})` : ''}`).join(', ');
+    // Combine with any manually entered remedy
+    const remedyValue = values.remedy
+      ? `${values.remedy}${selectedMedicineText ? ', ' + selectedMedicineText : ''}`
+      : selectedMedicineText;
     const treatmentData = {
       ...values,
+      remedy: remedyValue || undefined,
       date: now.toISOString().split('T')[0],
       time: now.toTimeString().split(' ')[0].substring(0, 5),
     };
-    
     onAddTreatment(treatmentData);
     form.reset({
       observations: "",
       remedy: "",
       dosage: "",
     });
+  // No need to reset selectedMedicineIds, handled by medicineRows state
     setSuggestions([]);
     toast({
       title: "Treatment Added",
       description: `A new treatment for ${patient.name} has been saved with current timestamp.`,
     });
   }
+
+  // Handle row selection in modal table
+  const handleRowSelect = (id: string) => {
+    setMedicineRows(rows => rows.map(row => row.id === id ? { ...row, selected: !row.selected } : row));
+  };
+
+  // Handle dosage change for a row
+  const handleRowDosage = (id: string, dosage: string) => {
+    setMedicineRows(rows => rows.map(row => row.id === id ? { ...row, dosage } : row));
+  };
 
   return (
     <Card className="shadow-md">
@@ -140,7 +221,12 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                     <FormItem>
                         <FormLabel>Suggested Remedy</FormLabel>
                          <FormControl>
-                            <Input placeholder="AI suggestions will appear here..." {...field} />
+                            <Input 
+                              placeholder="AI suggestions will appear here..." 
+                              {...field} 
+                              value={field.value || ''} // Ensure value is never undefined
+                              onChange={(e) => field.onChange(e.target.value || '')} // Ensure value is never null
+                            />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -164,7 +250,7 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                           onClick={() => {
                             const currentRemedies = form.getValues('remedy') || '';
                             const newRemedy = currentRemedies ? `${currentRemedies}, ${suggestion}` : suggestion;
-                            form.setValue('remedy', newRemedy);
+                            form.setValue('remedy', newRemedy, { shouldValidate: true });
                           }}
                         >
                           {suggestion}
@@ -176,32 +262,78 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
               </div>
             )}
 
-            <FormField
-              control={form.control}
-              name="dosage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Dosage Instructions</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select dosage frequency" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="OD">OD - Once daily</SelectItem>
-                      <SelectItem value="BD">BD - Twice daily</SelectItem>
-                      <SelectItem value="TDS">TDS - Three times daily</SelectItem>
-                      <SelectItem value="QDS">QDS - Four times daily</SelectItem>
-                      <SelectItem value="HS">HS - At bedtime</SelectItem>
-                      <SelectItem value="SOS">SOS - As needed</SelectItem>
-                      <SelectItem value="STAT">STAT - Immediately</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
+
+            {/* Medicine Selection Modal Trigger and Selected Medicines Display */}
+            <div className="space-y-2">
+              <Button type="button" variant="outline" onClick={() => setShowMedicineModal(true)}>
+                Select Medicines
+              </Button>
+              {/* Show selected medicines below button */}
+              {medicineRows.filter(row => row.selected).length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {medicineRows.filter(row => row.selected).map(row => (
+                    <span key={row.id} className="inline-block px-2 py-1 bg-accent rounded text-sm">
+                      {row.name}{row.dosage ? ` (${row.dosage})` : ''}
+                    </span>
+                  ))}
+                </div>
               )}
-            />
+            </div>
+
+            {/* Modal Table for Medicine Selection */}
+            {showMedicineModal && (
+              <Dialog open={showMedicineModal} onOpenChange={setShowMedicineModal}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Select Medicines for Treatment</DialogTitle>
+                  </DialogHeader>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>S. No.</TableHead>
+                        <TableHead>Medicine</TableHead>
+                        <TableHead>Dosage</TableHead>
+                        <TableHead>Select</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {medicineRows.map((row, idx) => (
+                        <TableRow key={row.id}>
+                          <TableCell>{idx + 1}</TableCell>
+                          <TableCell>{row.name}</TableCell>
+                          <TableCell>
+                            <Select value={row.dosage} onValueChange={val => handleRowDosage(row.id, val)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Dosage" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="OD">OD</SelectItem>
+                                <SelectItem value="BD">BD</SelectItem>
+                                <SelectItem value="TDS">TDS</SelectItem>
+                                <SelectItem value="QDS">QDS</SelectItem>
+                                <SelectItem value="HS">HS</SelectItem>
+                                <SelectItem value="SOS">SOS</SelectItem>
+                                <SelectItem value="STAT">STAT</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <input type="checkbox" checked={row.selected} onChange={() => handleRowSelect(row.id)} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <DialogFooter>
+                    <Button type="button" onClick={() => setShowMedicineModal(false)}>
+                      Done
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {/* Dosage instructions removed from main form. Now set per medicine in modal. */}
             
             <div className="flex justify-end">
               <Button type="submit" disabled={form.formState.isSubmitting}>

@@ -142,22 +142,7 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen} key={patient.id}>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edit Patient</span>
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Edit Patient</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+  <Dialog open={isOpen} onOpenChange={setIsOpen} key={patient.id}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Patient</DialogTitle>

@@ -10,7 +10,7 @@ import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, LogOut, Pill, Stethoscope, Edit, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, LogOut, Pill, Stethoscope, Edit, ArrowUpDown, ArrowUp, ArrowDown, BookText, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -340,6 +340,26 @@ export default function PatientsListPage() {
                     <TableCell>{patient.treatments?.length || 0}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            // Summary functionality would go here
+                            console.log("Summary button clicked for patient:", patient.id);
+                          }}
+                        >
+                          <BookText className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            // Close functionality would go here
+                            console.log("Close button clicked for patient:", patient.id);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                         <Button 
                           variant="outline" 
                           size="sm"

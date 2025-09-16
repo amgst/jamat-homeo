@@ -34,7 +34,6 @@ export default function DashboardPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [sortBy, setSortBy] = useState<'name' | 'patientNumber' | 'dateAdded'>('patientNumber');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-    const [shouldOpenEditDialog, setShouldOpenEditDialog] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const patientsPerPage = 10;
 
@@ -51,7 +50,10 @@ export default function DashboardPage() {
             if (patientId) {
                 setSelectedPatientId(patientId);
                 if (editMode) {
-                    setShouldOpenEditDialog(true);
+                    // Dispatch event to open edit dialog
+                    setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('openEditDialog'));
+                    }, 100);
                 }
             }
         }
@@ -236,7 +238,7 @@ export default function DashboardPage() {
         if (sortBy !== field) return <ArrowUpDown className="h-3 w-3" />;
         return sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
     };
-
+    
     if (!isClient || !isAuth) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center p-8 text-muted-foreground">
