@@ -103,9 +103,6 @@ function DashboardPageContent() {
             const patientsSnapshot = await getDocs(q);
             const patientsList = patientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient));
             setPatients(patientsList);
-            if (patientsList.length > 0 && !selectedPatientId) {
-                setSelectedPatientId(patientsList[0].id);
-            }
         } catch (error) {
             console.error("Error fetching patients:", error);
         } finally {

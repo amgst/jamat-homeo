@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -32,7 +32,7 @@ import {
 import type { Patient, Treatment, Medicine } from '@/lib/types';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { Loader2, Clock, Pill } from 'lucide-react';
+import { Loader2, Clock, Search } from 'lucide-react';
 
 const formSchema = z.object({
   observations: z.string().min(5, {
@@ -56,6 +56,11 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
   // Track selected medicines and their dosages
   const [showMedicineModal, setShowMedicineModal] = useState(false);
   const [medicineRows, setMedicineRows] = useState<Array<{ id: string; name: string; selected: boolean; dosage: string }>>([]);
+  // Add search state for medicine modal
+  const [medicineSearchQuery, setMedicineSearchQuery] = useState('');
+  // Add pagination state for medicine modal
+  const [currentPage, setCurrentPage] = useState(1);
+  const medicinesPerPage = 5;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -181,6 +186,31 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
     setMedicineRows(rows => rows.map(row => row.id === id ? { ...row, dosage } : row));
   };
 
+  // Filter medicine rows based on search query
+  const filteredMedicineRows = useMemo(() => {
+    if (!medicineSearchQuery) return medicineRows;
+    return medicineRows.filter(row => 
+        row.name.toLowerCase().includes(medicineSearchQuery.toLowerCase())
+    );
+  }, [medicineRows, medicineSearchQuery]);
+
+  // Calculate paginated medicine rows
+  const paginatedMedicineRows = useMemo(() => {
+    const startIndex = (currentPage - 1) * medicinesPerPage;
+    const endIndex = startIndex + medicinesPerPage;
+    return filteredMedicineRows.slice(startIndex, endIndex);
+  }, [filteredMedicineRows, currentPage]);
+
+  // Calculate total pages
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredMedicineRows.length / medicinesPerPage);
+  }, [filteredMedicineRows]);
+
+  // Reset to first page when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [medicineSearchQuery]);
+
   return (
     <Card className="shadow-md">
       <CardHeader>
@@ -282,11 +312,30 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
 
             {/* Modal Table for Medicine Selection */}
             {showMedicineModal && (
-              <Dialog open={showMedicineModal} onOpenChange={setShowMedicineModal}>
+              <Dialog open={showMedicineModal} onOpenChange={(open) => {
+                setShowMedicineModal(open);
+                // Reset pagination when modal closes
+                if (!open) {
+                  setCurrentPage(1);
+                  setMedicineSearchQuery('');
+                }
+              }}>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Select Medicines for Treatment</DialogTitle>
                   </DialogHeader>
+                  {/* Add search input to medicine selection modal */}
+                  <div className="py-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search medicines..."
+                        className="pl-10"
+                        value={medicineSearchQuery}
+                        onChange={(e) => setMedicineSearchQuery(e.target.value)}
+                      />
+                    </div>
+                  </div>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -297,9 +346,9 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {medicineRows.map((row, idx) => (
+                      {paginatedMedicineRows.map((row: { id: string; name: string; selected: boolean; dosage: string }, idx: number) => (
                         <TableRow key={row.id}>
-                          <TableCell>{idx + 1}</TableCell>
+                          <TableCell>{(currentPage - 1) * medicinesPerPage + idx + 1}</TableCell>
                           <TableCell>{row.name}</TableCell>
                           <TableCell>
                             <Select value={row.dosage} onValueChange={val => handleRowDosage(row.id, val)}>
@@ -324,6 +373,32 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                       ))}
                     </TableBody>
                   </Table>
+                  {/* Add pagination controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t pt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      
+                      <div className="text-sm text-muted-foreground">
+                        Page {currentPage} of {totalPages}
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
                   <DialogFooter>
                     <Button type="button" onClick={() => setShowMedicineModal(false)}>
                       Done
