@@ -47,10 +47,10 @@ import type { Patient } from "@/lib/types"
 
 const formSchema = z.object({
   name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
+    message: "نام کم از کم 2 حروف پر مشتمل ہونا چاہیے۔",
   }),
   sex: z.string().min(1, {
-    message: "Sex is required.",
+    message: "جنس ضروری ہے۔",
   }),
   dob: z.date().optional(),
   age: z.string().optional(),
@@ -157,8 +157,8 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
       await addDoc(collection(db, "patients"), patientData)
       
       toast({
-        title: "Success",
-        description: "Patient added successfully",
+        title: "کامیابی",
+        description: "مریض کامیابی سے شامل کر دیا گیا",
       })
       
       form.reset()
@@ -167,8 +167,8 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
     } catch (error) {
       console.error("Error adding patient:", error)
       toast({
-        title: "Error",
-        description: "Failed to add patient",
+        title: "خرابی",
+        description: "مریض شامل کرنے میں ناکامی ہوئی",
         variant: "destructive",
       })
     }
@@ -182,20 +182,20 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Patient
+                مریض شامل کریں
               </Button>
             </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Add a new patient to the system</p>
+            <p>سسٹم میں نیا مریض شامل کریں</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Patient</DialogTitle>
+          <DialogTitle>نیا مریض شامل کریں</DialogTitle>
           <DialogDescription>
-            Fill in the patient information below. All fields marked with * are required.
+            نیچے مریض کی معلومات درج کریں۔ جن فیلڈز پر * ہے وہ لازمی ہیں۔
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -206,9 +206,9 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name *</FormLabel>
+                    <FormLabel>نام *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter patient name" {...field} />
+                      <Input placeholder="مریض کا نام درج کریں" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -220,9 +220,9 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                 name="contactNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contact Number *</FormLabel>
+                    <FormLabel>رابطہ نمبر *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter contact number" {...field} />
+                      <Input placeholder="رابطہ نمبر درج کریں" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -232,7 +232,7 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <FormLabel>Age Information</FormLabel>
+                <FormLabel>عمر کی معلومات</FormLabel>
                 <div className="flex gap-2 p-1 bg-muted rounded-lg">
                   <Button
                     type="button"
@@ -241,7 +241,7 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                     className="flex-1"
                     onClick={() => setAgeInputMode("dob")}
                   >
-                    Date of Birth
+                    تاریخِ پیدائش
                   </Button>
                   <Button
                     type="button"
@@ -250,7 +250,7 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                     className="flex-1"
                     onClick={() => setAgeInputMode("age")}
                   >
-                    Direct Age
+                    براہِ راست عمر
                   </Button>
                 </div>
               </div>
@@ -261,7 +261,7 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                   name="dob"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Date of Birth</FormLabel>
+                      <FormLabel>تاریخِ پیدائش</FormLabel>
                       <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -275,7 +275,7 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                               {field.value && field.value instanceof Date && !isNaN(field.value.getTime()) ? (
                                 format(field.value, "PPP")
                               ) : (
-                                <span>Pick a date</span>
+                                <span>تاریخ منتخب کریں</span>
                               )}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
@@ -299,7 +299,7 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                       <FormMessage />
                       {field.value && (
                         <p className="text-sm text-muted-foreground">
-                          Age: {calculateAge(field.value)} years
+                          عمر: {calculateAge(field.value)} سال
                         </p>
                       )}
                     </FormItem>
@@ -311,11 +311,11 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                   name="age"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Age (in years)</FormLabel>
+                      <FormLabel>عمر (سال میں)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Enter age"
+                          placeholder="عمر درج کریں"
                           min="0"
                           max="150"
                           {...field}
@@ -330,14 +330,14 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Relation</Label>
+                <Label>رشتہ</Label>
                 <Select value={relation} onValueChange={(value: "father" | "husband") => setRelation(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="father">Father</SelectItem>
-                    <SelectItem value="husband">Husband</SelectItem>
+                    <SelectItem value="father">والد</SelectItem>
+                    <SelectItem value="husband">شوہر</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -348,9 +348,9 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                   name="fatherName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Father's Name</FormLabel>
+                      <FormLabel>والد کا نام</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter father's name" {...field} />
+                        <Input placeholder="والد کا نام درج کریں" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -362,9 +362,9 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                   name="husbandName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Husband's Name</FormLabel>
+                      <FormLabel>شوہر کا نام</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter husband's name" {...field} />
+                        <Input placeholder="شوہر کا نام درج کریں" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -379,17 +379,17 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                 name="sex"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Sex *</FormLabel>
+                    <FormLabel>جنس *</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select sex" />
+                          <SelectValue placeholder="جنس منتخب کریں" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="Male">مرد</SelectItem>
+                        <SelectItem value="Female">خاتون</SelectItem>
+                        <SelectItem value="Other">دیگر</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -402,11 +402,11 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
                 name="medicalHistory"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Blood Group</FormLabel>
+                    <FormLabel>بلڈ گروپ</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select blood group" />
+                          <SelectValue placeholder="بلڈ گروپ منتخب کریں" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -428,9 +428,9 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
             
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
+                منسوخ کریں
               </Button>
-              <Button type="submit">Add Patient</Button>
+              <Button type="submit">مریض شامل کریں</Button>
             </DialogFooter>
           </form>
         </Form>
