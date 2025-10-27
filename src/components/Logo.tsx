@@ -6,7 +6,7 @@ export function Logo() {
       <div className="rounded-lg bg-accent p-1.5 text-accent-foreground">
         <Stethoscope className="h-5 w-5" />
       </div>
-      <h1 className="text-xl font-bold font-headline">Haris Clinic</h1>
+      <h1 className="text-xl font-bold font-headline">حارث کلینک</h1>
     </div>
   );
 }

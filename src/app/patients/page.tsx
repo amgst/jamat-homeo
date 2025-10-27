@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Search, LogOut, Pill, Stethoscope, Edit, ArrowUpDown, ArrowUp, ArrowDown, BookText, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toUrduName } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,8 +64,8 @@ export default function PatientsListPage() {
     } catch (error) {
       console.error("Error fetching patients:", error);
       toast({
-        title: "Error",
-        description: "Failed to fetch patients. Please try again.",
+        title: "خرابی",
+        description: "مریضوں کا ڈیٹا حاصل کرنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔",
         variant: "destructive",
       });
     } finally {
@@ -89,7 +90,7 @@ export default function PatientsListPage() {
     if (ageValue !== undefined && ageValue !== null) {
       return ageValue;
     }
-    return 'N/A';
+    return 'نامعلوم';
   };
 
   const handleSort = (key: keyof Patient) => {
@@ -128,9 +129,9 @@ export default function PatientsListPage() {
           const ageA = calculateAge(a.dob || '', a.age);
           const ageB = calculateAge(b.dob || '', b.age);
           
-          if (ageA === 'N/A' && ageB === 'N/A') return 0;
-          if (ageA === 'N/A') return sortConfig.direction === 'asc' ? 1 : -1;
-          if (ageB === 'N/A') return sortConfig.direction === 'asc' ? -1 : 1;
+          if (ageA === 'نامعلوم' && ageB === 'نامعلوم') return 0;
+          if (ageA === 'نامعلوم') return sortConfig.direction === 'asc' ? 1 : -1;
+          if (ageB === 'نامعلوم') return sortConfig.direction === 'asc' ? -1 : 1;
           
           return sortConfig.direction === 'asc' 
             ? (ageA as number) - (ageB as number) 
@@ -216,8 +217,8 @@ export default function PatientsListPage() {
         <div className="mb-4 rounded-full bg-accent/10 p-4 text-accent">
           <Stethoscope className="h-16 w-16 animate-pulse"/>
         </div>
-        <h2 className="text-2xl font-headline text-foreground">Loading Patients...</h2>
-        <p className="max-w-md">Please wait a moment.</p>
+        <h2 className="text-2xl font-headline text-foreground">مریض لوڈ ہو رہے ہیں...</h2>
+        <p className="max-w-md">براہ کرم کچھ لمحہ انتظار کریں۔</p>
       </div>
     );
   }
@@ -232,13 +233,13 @@ export default function PatientsListPage() {
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => router.push('/dashboard')}>
-                Dashboard
+                ڈیش بورڈ
               </Button>
               <Button variant="secondary">
-                Patients
+                مریض
               </Button>
               <Button variant="ghost" onClick={() => router.push('/medicines')}>
-                Medicines
+                ادویات
               </Button>
             </div>
           </div>
@@ -251,8 +252,8 @@ export default function PatientsListPage() {
       <main className="container mx-auto px-4 py-6">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">All Patients</h1>
-            <p className="text-muted-foreground">View and manage all patients in a table format</p>
+            <h1 className="text-3xl font-bold">تمام مریض</h1>
+            <p className="text-muted-foreground">تمام مریضوں کو جدول میں دیکھیں اور منظم کریں</p>
           </div>
         </div>
 
@@ -260,7 +261,7 @@ export default function PatientsListPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search patients by name, ID, or contact number..." 
+              placeholder="نام، آئی ڈی یا رابطہ نمبر سے مریض تلاش کریں..." 
               className="pl-10" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -273,34 +274,34 @@ export default function PatientsListPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('patientNumber')}>
-                  Patient ID
+                  مریض آئی ڈی
                   <span className="float-right">{getSortIcon('patientNumber')}</span>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
-                  Name
+                  نام
                   <span className="float-right">{getSortIcon('name')}</span>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('age')}>
-                  Age
+                  عمر
                   <span className="float-right">{getSortIcon('age')}</span>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('contactNumber')}>
-                  Contact
+                  رابطہ
                   <span className="float-right">{getSortIcon('contactNumber')}</span>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('sex')}>
-                  Sex
+                  جنس
                   <span className="float-right">{getSortIcon('sex')}</span>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('bloodGroup')}>
-                  Blood Group
+                  بلڈ گروپ
                   <span className="float-right">{getSortIcon('bloodGroup')}</span>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('treatments')}>
-                  Treatments
+                  علاج
                   <span className="float-right">{getSortIcon('treatments')}</span>
                 </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">عمل</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -324,19 +325,19 @@ export default function PatientsListPage() {
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     <Stethoscope className="h-12 w-12 mx-auto mb-2" />
-                    <p className="text-lg">No patients found</p>
-                    <p>Try adjusting your search query</p>
+                    <p className="text-lg">کوئی مریض نہیں ملا</p>
+                    <p>اپنی تلاش تبدیل کریں</p>
                   </TableCell>
                 </TableRow>
               ) : (
                 sortedAndFilteredPatients.map((patient) => (
                   <TableRow key={patient.id}>
-                    <TableCell className="font-medium">{patient.patientNumber || 'N/A'}</TableCell>
-                    <TableCell>{patient.name}</TableCell>
+                    <TableCell className="font-medium">{patient.patientNumber || 'نامعلوم'}</TableCell>
+                    <TableCell>{toUrduName(patient.name)}</TableCell>
                     <TableCell>{calculateAge(patient.dob || '', patient.age)}</TableCell>
-                    <TableCell>{patient.contactNumber || 'N/A'}</TableCell>
-                    <TableCell>{patient.sex || 'N/A'}</TableCell>
-                    <TableCell>{patient.bloodGroup || 'N/A'}</TableCell>
+                    <TableCell>{patient.contactNumber || 'نامعلوم'}</TableCell>
+                    <TableCell>{patient.sex || 'نامعلوم'}</TableCell>
+                    <TableCell>{patient.bloodGroup || 'نامعلوم'}</TableCell>
                     <TableCell>{patient.treatments?.length || 0}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -380,20 +381,20 @@ export default function PatientsListPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>کیا آپ یقینی ہیں؟</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the patient 
-              <span className="font-semibold"> {patientToDelete?.name}</span> and all associated data.
+              یہ عمل واپس نہیں لیا جا سکتا۔ اس سے مریض 
+              <span className="font-semibold"> {toUrduName(patientToDelete?.name || '')}</span> اور اس کا تمام متعلقہ ڈیٹا مستقل طور پر حذف ہو جائے گا۔
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>منسوخ کریں</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeletePatient} 
               disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? 'حذف کیا جا رہا ہے...' : 'حذف کریں'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

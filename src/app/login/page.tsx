@@ -38,17 +38,17 @@ export default function LoginPage() {
 
     if (login(finalPin)) {
       toast({
-        title: "Login Successful",
-        description: "Welcome back!",
+        title: "لاگ اِن کامیاب",
+        description: "خوش آمدید!",
       });
       router.replace('/dashboard');
     } else {
-      setError('Invalid PIN. Please try again.');
+      setError('غلط پن۔ دوبارہ کوشش کریں۔');
       setPin('');
       toast({
         variant: 'destructive',
-        title: "Login Failed",
-        description: "The PIN you entered is incorrect.",
+        title: "لاگ اِن ناکام",
+        description: "درج کیا گیا پن درست نہیں ہے۔",
       });
       setIsLoading(false);
     }
@@ -61,8 +61,8 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-sm shadow-2xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-headline">Enter PIN</CardTitle>
-          <CardDescription>Enter your 4-digit PIN to access the app.</CardDescription>
+          <CardTitle className="text-2xl font-headline">پن درج کریں</CardTitle>
+          <CardDescription>ایپ تک رسائی کے لیے 4 ہندسوں کا پن درج کریں۔</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={(e) => { e.preventDefault(); handleSubmit(pin); }}>
@@ -86,7 +86,7 @@ export default function LoginPage() {
               </div>
               <Button type="submit" className="w-full" disabled={isLoading || pin.length < 4}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Unlock
+                کھولیں
               </Button>
             </div>
           </form>

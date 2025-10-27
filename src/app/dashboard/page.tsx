@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserPlus, Search, Stethoscope, LogOut, PanelLeft, ArrowUpDown, ArrowUp, ArrowDown, Pill } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, toUrduName } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>لوڈ ہو رہا ہے...</div>}>
       <DashboardPageContent />
     </Suspense>
   );
@@ -133,14 +133,14 @@ function DashboardPageContent() {
             }
             console.log('Patient updated successfully');
             toast({
-                title: "Patient Updated",
-                description: "Patient information has been successfully updated.",
+                title: "مریض کی معلومات اپڈیٹ ہو گئی",
+                description: "مریض کی معلومات کامیابی سے اپڈیٹ کر دی گئی ہیں۔",
             });
         } catch (error) {
             console.error("Error updating patient: ", error);
             toast({
-                title: "Update Failed",
-                description: "Failed to update patient information. Please try again.",
+                title: "اپڈیٹ ناکام",
+                description: "مریض کی معلومات اپڈیٹ کرنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔",
                 variant: "destructive",
             });
         }
@@ -168,7 +168,7 @@ function DashboardPageContent() {
         if (ageValue !== undefined && ageValue !== null) {
             return ageValue;
         }
-        return 'N/A';
+        return 'نامعلوم';
     };
 
     const filteredAndSortedPatients = useMemo(() => {
@@ -252,8 +252,8 @@ function DashboardPageContent() {
                <div className="mb-4 rounded-full bg-accent/10 p-4 text-accent">
                   <Stethoscope className="h-16 w-16 animate-pulse"/>
                 </div>
-                <h2 className="text-2xl font-headline text-foreground">Loading Dashboard...</h2>
-                <p className="max-w-md">Please wait a moment.</p>
+                <h2 className="text-2xl font-headline text-foreground">ڈیش بورڈ لوڈ ہو رہا ہے...</h2>
+                <p className="max-w-md">براہ کرم کچھ لمحہ انتظار کریں۔</p>
             </div>
         );
     }
@@ -271,11 +271,11 @@ function DashboardPageContent() {
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" onClick={() => router.push('/patients')} className="text-muted-foreground hover:text-foreground">
                                     <PanelLeft className="h-5 w-5" />
-                                    <span className="sr-only">Patient List</span>
+                                    <span className="sr-only">مریضوں کی فہرست</span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                            <p>Patient List</p>
+                            <p>مریضوں کی فہرست</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -284,11 +284,11 @@ function DashboardPageContent() {
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" onClick={() => router.push('/medicines')} className="text-muted-foreground hover:text-foreground">
                                     <Pill className="h-5 w-5" />
-                                    <span className="sr-only">Medicines</span>
+                                    <span className="sr-only">ادویات</span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                            <p>Medicines</p>
+                            <p>ادویات</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -297,11 +297,11 @@ function DashboardPageContent() {
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
                                     <LogOut className="h-5 w-5" />
-                                    <span className="sr-only">Logout</span>
+                                    <span className="sr-only">لاگ آؤٹ</span>
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                            <p>Logout</p>
+                            <p>لاگ آؤٹ</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -312,7 +312,7 @@ function DashboardPageContent() {
                 <div className="relative mb-3">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
-                        placeholder="Search patients..." 
+                        placeholder="مریضوں کو تلاش کریں..." 
                         className="pl-10" 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -327,7 +327,7 @@ function DashboardPageContent() {
                         onClick={() => handleSort('patientNumber')}
                         className="h-7 px-2 text-xs"
                     >
-                        ID {getSortIcon('patientNumber')}
+                        آئی ڈی {getSortIcon('patientNumber')}
                     </Button>
                     <Button 
                         variant={sortBy === 'name' ? 'secondary' : 'ghost'} 
@@ -335,7 +335,7 @@ function DashboardPageContent() {
                         onClick={() => handleSort('name')}
                         className="h-7 px-2 text-xs"
                     >
-                        Name {getSortIcon('name')}
+                        نام {getSortIcon('name')}
                     </Button>
                     <Button 
                         variant={sortBy === 'dateAdded' ? 'secondary' : 'ghost'} 
@@ -343,7 +343,7 @@ function DashboardPageContent() {
                         onClick={() => handleSort('dateAdded')}
                         className="h-7 px-2 text-xs"
                     >
-                        Added {getSortIcon('dateAdded')}
+                        شامل کیا گیا {getSortIcon('dateAdded')}
                     </Button>
                 </div>
             </div>
@@ -377,12 +377,12 @@ function DashboardPageContent() {
                                       aria-current={selectedPatientId === patient.id}
                                    >
                                        <Avatar className="h-10 w-10">
-                                           {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.patientNumber || patient.name} data-ai-hint="person" />}
-                                           <AvatarFallback>{patient.patientNumber || patient.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
+                                           {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.patientNumber || toUrduName(patient.name)} data-ai-hint="person" />}
+                                           <AvatarFallback>{patient.patientNumber || toUrduName(patient.name).split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
                                        </Avatar>
                                        <div className="overflow-hidden">
                                            <div className="flex items-center gap-2">
-                                               <p className="font-semibold truncate">{patient.name}</p>
+                                               <p className="font-semibold truncate">{toUrduName(patient.name)}</p>
                                            </div>
                                            <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob || '', patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob || '', patient.age)} years`}</p>
                                        </div>
@@ -406,13 +406,13 @@ function DashboardPageContent() {
                         </div>
                         <div className="flex gap-2">
                             <Button variant="secondary">
-                                Patients
+                                مریض
                             </Button>
                             <Button variant="ghost" onClick={() => router.push('/patients')}>
-                                Patient List
+                                مریضوں کی فہرست
                             </Button>
                             <Button variant="ghost" onClick={() => router.push('/medicines')}>
-                                Medicines
+                                ادویات
                             </Button>
                         </div>
                     </div>
@@ -425,8 +425,8 @@ function DashboardPageContent() {
             <main className="container mx-auto px-4 py-6">
                 <div className="flex justify-between items-center mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold">Patient Management</h1>
-                        <p className="text-muted-foreground">Manage your patients</p>
+                        <h1 className="text-3xl font-bold">مریضوں کا نظم و نسق</h1>
+                        <p className="text-muted-foreground">اپنے مریضوں کو منظم کریں</p>
                     </div>
                     <AddPatientDialog onAddPatient={handleAddPatient} existingPatients={patients} />
                 </div>
@@ -435,7 +435,7 @@ function DashboardPageContent() {
                     <div className="relative mb-3">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
-                            placeholder="Search patients..." 
+                            placeholder="مریضوں کو تلاش کریں..." 
                             className="pl-10" 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -449,7 +449,7 @@ function DashboardPageContent() {
                             onClick={() => handleSort('patientNumber')}
                             className="h-7 px-2 text-xs"
                         >
-                            ID {getSortIcon('patientNumber')}
+                            آئی ڈی {getSortIcon('patientNumber')}
                         </Button>
                         <Button 
                             variant={sortBy === 'name' ? 'secondary' : 'ghost'} 
@@ -457,7 +457,7 @@ function DashboardPageContent() {
                             onClick={() => handleSort('name')}
                             className="h-7 px-2 text-xs"
                         >
-                            Name {getSortIcon('name')}
+                            نام {getSortIcon('name')}
                         </Button>
                         <Button 
                             variant={sortBy === 'dateAdded' ? 'secondary' : 'ghost'} 
@@ -465,7 +465,7 @@ function DashboardPageContent() {
                             onClick={() => handleSort('dateAdded')}
                             className="h-7 px-2 text-xs"
                         >
-                            Added {getSortIcon('dateAdded')}
+                            شامل کیا گیا {getSortIcon('dateAdded')}
                         </Button>
                     </div>
                 </div>
@@ -478,13 +478,13 @@ function DashboardPageContent() {
                             }`} onClick={() => handleSelectPatient(patient.id)}>
                                 <div className="flex items-center space-x-3">
                                     <Avatar className="h-12 w-12">
-                                        {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.patientNumber || patient.name} />}
-                                        <AvatarFallback>{patient.patientNumber || patient.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
+                                        {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.patientNumber || toUrduName(patient.name)} />}
+                                        <AvatarFallback>{patient.patientNumber || toUrduName(patient.name).split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <h3 className="font-semibold">{patient.name}</h3>
-                                        <p className="text-sm text-muted-foreground">Age: {calculateAge(patient.dob || '', patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob || '', patient.age)} years`}</p>
-                                        {patient.patientNumber && <p className="text-xs text-muted-foreground">ID: {patient.patientNumber}</p>}
+                                        <h3 className="font-semibold">{toUrduName(patient.name)}</h3>
+                                        <p className="text-sm text-muted-foreground">عمر: {calculateAge(patient.dob || '', patient.age) === 'نامعلوم' ? 'نامعلوم' : `${calculateAge(patient.dob || '', patient.age)} سال`}</p>
+                                        {patient.patientNumber && <p className="text-xs text-muted-foreground">آئی ڈی: {patient.patientNumber}</p>}
                                     </div>
                                 </div>
                             </div>
@@ -499,11 +499,11 @@ function DashboardPageContent() {
                                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                     disabled={currentPage === 1}
                                 >
-                                    Previous
+                                    پچھلا
                                 </Button>
                                 
                                 <div className="text-sm text-muted-foreground">
-                                    Page {currentPage} of {totalPages}
+                                    صفحہ {currentPage} از {totalPages}
                                 </div>
                                 
                                 <Button
@@ -512,7 +512,7 @@ function DashboardPageContent() {
                                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                     disabled={currentPage === totalPages}
                                 >
-                                    Next
+                                    اگلا
                                 </Button>
                             </div>
                         )}

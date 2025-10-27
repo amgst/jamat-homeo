@@ -31,13 +31,13 @@ import type { Treatment } from '@/lib/types';
 
 const formSchema = z.object({
   date: z.date({
-    required_error: "Treatment date is required.",
+    required_error: "علاج کی تاریخ ضروری ہے۔",
   }),
   time: z.string().min(1, {
-    message: "Treatment time is required.",
+    message: "علاج کا وقت ضروری ہے۔",
   }),
   observations: z.string().min(5, {
-    message: "Observations must be at least 5 characters.",
+    message: "مشاہدات کم از کم 5 حروف ہونے چاہئیں۔",
   }),
   remedy: z.string().optional(),
 });
@@ -73,8 +73,8 @@ export function EditTreatmentDialog({ treatment, onUpdateTreatment }: EditTreatm
     onUpdateTreatment(updatedTreatment);
     setIsOpen(false);
     toast({
-      title: "Treatment Updated",
-      description: "The treatment record has been successfully updated.",
+      title: "علاج اپڈیٹ ہو گیا",
+      description: "علاج کا ریکارڈ کامیابی سے اپڈیٹ کر دیا گیا ہے۔",
     });
   }
 
@@ -86,20 +86,20 @@ export function EditTreatmentDialog({ treatment, onUpdateTreatment }: EditTreatm
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
                 <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edit Treatment</span>
+                <span className="sr-only">علاج میں ترمیم کریں</span>
               </Button>
             </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Edit Treatment</p>
+            <p>علاج میں ترمیم کریں</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Edit Treatment</DialogTitle>
+          <DialogTitle>علاج میں ترمیم کریں</DialogTitle>
           <DialogDescription>
-            Update the treatment details below. Click save when you're done.
+            نیچے علاج کی تفصیلات اپڈیٹ کریں۔ جب مکمل ہو جائے تو محفوظ کریں۔
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -110,7 +110,7 @@ export function EditTreatmentDialog({ treatment, onUpdateTreatment }: EditTreatm
                 name="date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Treatment Date</FormLabel>
+                    <FormLabel>علاج کی تاریخ</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -124,7 +124,7 @@ export function EditTreatmentDialog({ treatment, onUpdateTreatment }: EditTreatm
                             {field.value ? (
                               format(field.value, "PPP")
                             ) : (
-                              <span>Pick a date</span>
+                              <span>تاریخ منتخب کریں</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -151,7 +151,7 @@ export function EditTreatmentDialog({ treatment, onUpdateTreatment }: EditTreatm
                 name="time"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Treatment Time</FormLabel>
+                    <FormLabel>علاج کا وقت</FormLabel>
                     <FormControl>
                       <Input 
                         type="time"
@@ -168,10 +168,10 @@ export function EditTreatmentDialog({ treatment, onUpdateTreatment }: EditTreatm
               name="observations"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Observations & Notes</FormLabel>
+                  <FormLabel>مشاہدات اور نوٹس</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Describe patient's condition, symptoms, etc." 
+                      placeholder="مریض کی حالت، علامات وغیرہ بیان کریں" 
                       rows={4}
                       {...field}
                     />
@@ -185,10 +185,10 @@ export function EditTreatmentDialog({ treatment, onUpdateTreatment }: EditTreatm
               name="remedy"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Remedy (Optional)</FormLabel>
+                  <FormLabel>علاج/دوائی (اختیاری)</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="Enter prescribed remedy" 
+                      placeholder="مقررہ دوائی درج کریں" 
                       {...field} 
                     />
                   </FormControl>
@@ -199,10 +199,10 @@ export function EditTreatmentDialog({ treatment, onUpdateTreatment }: EditTreatm
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="secondary">
-                  Cancel
+                  منسوخ کریں
                 </Button>
               </DialogClose>
-              <Button type="submit">Save Changes</Button>
+              <Button type="submit">تبدیلیاں محفوظ کریں</Button>
             </DialogFooter>
           </form>
         </Form>

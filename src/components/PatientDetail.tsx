@@ -116,8 +116,8 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
     setTreatmentToDelete(null);
     
     toast({
-      title: "Treatment Deleted",
-      description: "The treatment record has been successfully deleted.",
+      title: "علاج حذف ہو گیا",
+      description: "علاج کا ریکارڈ کامیابی سے حذف کر دیا گیا ہے۔",
     });
   };
   
@@ -125,8 +125,8 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
     if (!patient.treatments || patient.treatments.length === 0) {
       toast({
         variant: "destructive",
-        title: "No History Found",
-        description: "There are no treatments to summarize for this patient.",
+        title: "کوئی سابقہ تاریخ نہیں ملی",
+        description: "اس مریض کے لیے خلاصہ کرنے کے لیے کوئی علاج موجود نہیں ہے۔",
       });
       return;
     }
@@ -145,8 +145,8 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
       console.error("AI summary error:", error);
       toast({
         variant: "destructive",
-        title: "Summary Failed",
-        description: "Could not generate the patient summary. Please try again.",
+        title: "خلاصہ ناکام",
+        description: "مریض کا خلاصہ تیار نہیں کیا جا سکا۔ براہ کرم دوبارہ کوشش کریں۔",
       });
     } finally {
       setIsSummarizing(false);
@@ -176,10 +176,10 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
         if (ageValue !== undefined && ageValue !== null) {
             return ageValue;
         }
-        return 'N/A';
+        return 'نامعلوم';
     };
     
-    const dobFormatted = patient.dob ? new Date(patient.dob).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : 'N/A';
+    const dobFormatted = patient.dob ? new Date(patient.dob).toLocaleDateString('ur-PK', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : 'نامعلوم';
 
     // Get first and last treatment dates
     const getFirstTreatmentDate = () => {
@@ -213,21 +213,21 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
             <h1 className="text-3xl font-bold font-headline">{patient.name}</h1>
             {patient.patientNumber && (
               <div className="bg-primary/10 px-3 py-1 rounded-lg mt-2 w-fit">
-                <span className="text-sm font-medium text-primary">Patient #: {patient.patientNumber}</span>
+                <span className="text-sm font-medium text-primary">مریض #: {patient.patientNumber}</span>
               </div>
             )}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
             <div>
-              <p className="text-muted-foreground">Age</p>
+              <p className="text-muted-foreground">عمر</p>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <p className="font-medium text-left cursor-pointer">{calculateAge(patient.dob || '', patient.age) === 'N/A' ? 'N/A' : `${calculateAge(patient.dob || '', patient.age)} years`}</p>
+                    <p className="font-medium cursor-pointer">{calculateAge(patient.dob || '', patient.age) === 'نامعلوم' ? 'نامعلوم' : `${calculateAge(patient.dob || '', patient.age)} سال`}</p>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>DOB: {dobFormatted}</p>
+                    <p>تاریخِ پیدائش: {dobFormatted}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -235,22 +235,22 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
             
             {patient.contactNumber && (
               <div>
-                <p className="text-muted-foreground">Contact</p>
+                <p className="text-muted-foreground">رابطہ</p>
                 <p className="font-medium">{patient.contactNumber}</p>
               </div>
             )}
             
             {firstTreatment && (
               <div>
-                <p className="text-muted-foreground">First Visit</p>
-                <p className="font-medium">{firstTreatment.date ? new Date(firstTreatment.date).toLocaleDateString() : 'N/A'}</p>
+                <p className="text-muted-foreground">پہلا معائنہ</p>
+                <p className="font-medium">{firstTreatment.date ? new Date(firstTreatment.date).toLocaleDateString('ur-PK') : 'نامعلوم'}</p>
               </div>
             )}
             
             {lastTreatment && (
               <div>
-                <p className="text-muted-foreground">Last Visit</p>
-                <p className="font-medium">{lastTreatment.date ? new Date(lastTreatment.date).toLocaleDateString() : 'N/A'}</p>
+                <p className="text-muted-foreground">آخری معائنہ</p>
+                <p className="font-medium">{lastTreatment.date ? new Date(lastTreatment.date).toLocaleDateString('ur-PK') : 'نامعلوم'}</p>
               </div>
             )}
           </div>
@@ -262,11 +262,11 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
                 <TooltipTrigger asChild>
                   <Button onClick={handleSummarize} disabled={isSummarizing} size="icon" variant="outline">
                     {isSummarizing ? <Loader2 className="animate-spin" /> : <BookText />}
-                    <span className="sr-only">Summarize History</span>
+                    <span className="sr-only">خلاصہ بنائیں</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Summarize History</p>
+                  <p>خلاصہ بنائیں</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -275,14 +275,14 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)} disabled={isDeleting}>
-                    <span className="sr-only">Delete Patient</span>
+                    <span className="sr-only">مریض حذف کریں</span>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Delete Patient</p>
+                  <p>مریض حذف کریں</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -294,23 +294,23 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
           <TreatmentForm patient={patient} onAddTreatment={handleAddTreatment} />
           
           <div>
-            <h2 className="text-2xl font-bold font-headline mb-4">Treatment History</h2>
+            <h2 className="text-2xl font-bold font-headline mb-4">علاج کی تاریخ</h2>
             {sortedTreatments && sortedTreatments.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full border rounded-lg bg-background/50">
                   <thead>
                     <tr className="bg-card/50">
-                      <th className="px-4 py-2 text-left">Date & Time</th>
-                      <th className="px-4 py-2 text-left">Remedy</th>
-                      <th className="px-4 py-2 text-left">Observations</th>
-                      <th className="px-4 py-2 text-left w-20">Actions</th>
+                      <th className="px-4 py-2 text-left">تاریخ اور وقت</th>
+                      <th className="px-4 py-2 text-left">علاج</th>
+                      <th className="px-4 py-2 text-left">مشاہدات</th>
+                      <th className="px-4 py-2 text-left w-20">عمل</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedTreatments.map((treatment, index) => (
                       <tr key={treatment.id || index} className="border-b">
                         <td className="px-4 py-2">
-                          <div>{treatment.date ? new Date(treatment.date).toLocaleDateString() : 'N/A'}</div>
+                          <div>{treatment.date ? new Date(treatment.date).toLocaleDateString('ur-PK') : 'نامعلوم'}</div>
                           <div className="text-xs text-muted-foreground mt-1">{treatment.time}</div>
                         </td>
                         <td className="px-4 py-2">{treatment.remedy || '-'}</td>
@@ -338,8 +338,8 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-8 border-2 border-dashed rounded-lg">
-                <p>No treatments recorded yet.</p>
-                <p className="text-sm">Use the form above to add the first entry.</p>
+                <p>ابھی تک کوئی علاج ریکارڈ نہیں ہوا۔</p>
+                <p className="text-sm">اوپر موجود فارم کا استعمال کر کے پہلی اندراج شامل کریں۔</p>
               </div>
             )}
           </div>
@@ -349,9 +349,9 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
       <AlertDialog open={showDeleteTreatmentDialog} onOpenChange={setShowDeleteTreatmentDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Treatment Record</AlertDialogTitle>
+            <AlertDialogTitle>علاج کا ریکارڈ حذف کریں</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this treatment record? This action cannot be undone.
+              کیا آپ اس علاج کا ریکارڈ حذف کرنا چاہتے ہیں؟ یہ کارروائی واپس نہیں لی جا سکتی۔
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -359,13 +359,13 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
               setShowDeleteTreatmentDialog(false);
               setTreatmentToDelete(null);
             }}>
-              Cancel
+              منسوخ کریں
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteTreatment}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              حذف کریں
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -374,13 +374,13 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
       <AlertDialog open={!!summary} onOpenChange={(open) => !open && setSummary(null)}>
         <AlertDialogContent className="max-w-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Patient Summary for {patient.name}</AlertDialogTitle>
+            <AlertDialogTitle>مریض کا خلاصہ: {patient.name}</AlertDialogTitle>
             <AlertDialogDescription className="text-foreground whitespace-pre-wrap font-body pt-4 max-h-[60vh] overflow-y-auto">
               {summary}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogCancel>بند کریں</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
