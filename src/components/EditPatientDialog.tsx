@@ -58,6 +58,13 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
   const [ageInputMode, setAgeInputMode] = useState<"dob" | "age">(patient.dob ? "dob" : "age");
   const { toast } = useToast();
   
+  // Open dialog when a global 'openEditDialog' event is dispatched (from dashboard URL param)
+  useEffect(() => {
+    const handler = () => setIsOpen(true);
+    window.addEventListener('openEditDialog', handler);
+    return () => window.removeEventListener('openEditDialog', handler);
+  }, []);
+  
   // Function to calculate age from date of birth (Date or ISO string)
   const calculateAge = (dobInput: Date | string) => {
     const dob = dobInput instanceof Date ? dobInput : new Date(dobInput);
@@ -143,6 +150,21 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
 
   return (
   <Dialog open={isOpen} onOpenChange={setIsOpen} key={patient.id}>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Edit Patient</span>
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Edit patient details</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Patient</DialogTitle>
