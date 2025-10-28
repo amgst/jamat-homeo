@@ -36,6 +36,8 @@ export default function PatientsListPage() {
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Patient; direction: 'asc' | 'desc' } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const patientsPerPage = 10;
 
   useEffect(() => {
     setIsClient(true);
@@ -175,6 +177,21 @@ export default function PatientsListPage() {
     
     return filtered;
   }, [patients, searchQuery, sortConfig]);
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(sortedAndFilteredPatients.length / patientsPerPage) || 1;
+  }, [sortedAndFilteredPatients]);
+
+  const paginatedPatients = useMemo(() => {
+    const startIndex = (currentPage - 1) * patientsPerPage;
+    const endIndex = startIndex + patientsPerPage;
+    return sortedAndFilteredPatients.slice(startIndex, endIndex);
+  }, [sortedAndFilteredPatients, currentPage]);
+
+  useEffect(() => {
+    // Reset to first page when search or sort changes
+    setCurrentPage(1);
+  }, [searchQuery, sortConfig]);
 
   const handleLogout = () => {
     logout();
@@ -330,7 +347,7 @@ export default function PatientsListPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedAndFilteredPatients.map((patient) => (
+                paginatedPatients.map((patient) => (
                   <TableRow key={patient.id}>
                     <TableCell className="font-medium">{patient.patientNumber || 'نامعلوم'}</TableCell>
                     <TableCell>{toUrduName(patient.name)}</TableCell>
@@ -376,6 +393,29 @@ export default function PatientsListPage() {
             </TableBody>
           </Table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t pt-4 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              پچھلا
+            </Button>
+            <div className="text-sm text-muted-foreground">
+              صفحہ {currentPage} از {totalPages}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              اگلا
+            </Button>
+          </div>
+        )}
       </main>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
