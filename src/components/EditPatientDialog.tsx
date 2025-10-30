@@ -39,13 +39,12 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
-  name: z.string().min(1, {
-    message: "Name is required.",
-  }),
+  name: z.string().min(1, { message: "Name is required." }),
   dob: z.date().optional(),
   age: z.string().optional(),
   patientNumber: z.string().optional(),
   contactNumber: z.string().optional(),
+  sex: z.string(),
 });
 
 type EditPatientDialogProps = {
@@ -53,13 +52,15 @@ type EditPatientDialogProps = {
   onUpdatePatient: (patient: Patient) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onDeletePatient?: (patient: Patient) => void; // added
 };
 
-export function EditPatientDialog({ patient, onUpdatePatient, open, onOpenChange }: EditPatientDialogProps) {
+export function EditPatientDialog({ patient, onUpdatePatient, open, onOpenChange, onDeletePatient }: EditPatientDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const dialogOpen = open !== undefined ? open : internalOpen;
   const setDialogOpen = onOpenChange || setInternalOpen;
   const [ageInputMode, setAgeInputMode] = useState<"dob" | "age">(patient.dob ? "dob" : "age");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { toast } = useToast();
   
   // Open dialog when a global 'openEditDialog' event is dispatched (from dashboard URL param)
@@ -90,6 +91,7 @@ export function EditPatientDialog({ patient, onUpdatePatient, open, onOpenChange
       age: patient.age ? String(patient.age) : "",
       patientNumber: patient.patientNumber || "",
       contactNumber: patient.contactNumber || "",
+      sex: patient.sex || "Male",
     },
   });
 
@@ -124,6 +126,7 @@ export function EditPatientDialog({ patient, onUpdatePatient, open, onOpenChange
         age: patient.age ? String(patient.age) : "",
         patientNumber: patient.patientNumber || "",
         contactNumber: patient.contactNumber || "",
+        sex: patient.sex || "Male",
       });
       setAgeInputMode(patient.dob ? "dob" : "age");
     }
@@ -198,6 +201,23 @@ export function EditPatientDialog({ patient, onUpdatePatient, open, onOpenChange
                         field.onChange(e);
                       }}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sex"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <FormControl>
+                    <select {...field} className="input border rounded h-10 px-2">
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -327,6 +347,41 @@ export function EditPatientDialog({ patient, onUpdatePatient, open, onOpenChange
               )}
             />
             <DialogFooter>
+              {onDeletePatient && (
+                <>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="mr-auto"
+                  >
+                    Delete Patient
+                  </Button>
+                  <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                    <DialogContent className="max-w-xs">
+                      <DialogHeader>
+                        <DialogTitle>Delete Patient</DialogTitle>
+                        <DialogDescription>Are you sure you want to delete this patient? This cannot be undone.</DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button
+                          variant="destructive"
+                          onClick={() => {
+                            onDeletePatient(patient);
+                            setShowDeleteDialog(false);
+                            setDialogOpen(false);
+                          }}
+                        >
+                          Confirm Delete
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
               <DialogClose asChild>
                 <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
                   Cancel
