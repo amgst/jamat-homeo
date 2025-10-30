@@ -8,7 +8,6 @@ import { ScrollArea } from './ui/scroll-area';
 import { Timestamp } from 'firebase/firestore';
 import { Button } from './ui/button';
 import { BookText, Loader2, Trash2 } from 'lucide-react';
-import { summarizeTreatmentHistory } from '@/ai/flows/summarize-treatment';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -37,8 +36,8 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
   const [showDeleteTreatmentDialog, setShowDeleteTreatmentDialog] = useState(false);
   const [treatmentToDelete, setTreatmentToDelete] = useState<string | null>(null);
   const { toast } = useToast();
-  const [isSummarizing, setIsSummarizing] = useState(false);
-  const [summary, setSummary] = useState<string | null>(null);
+  // Remove summarizeTreatmentHistory import, summary, isSummarizing, handleSummarize, and any references
+  // Remove any buttons, UI, or dialog for summarizing patient treatments
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Open edit dialog when component mounts if requested
@@ -121,37 +120,8 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
     });
   };
   
-  const handleSummarize = async () => {
-    if (!patient.treatments || patient.treatments.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "کوئی سابقہ تاریخ نہیں ملی",
-        description: "اس مریض کے لیے خلاصہ کرنے کے لیے کوئی علاج موجود نہیں ہے۔",
-      });
-      return;
-    }
-    
-    setIsSummarizing(true);
-    try {
-      const patientDetails = `Name: ${patient.name}, DOB: ${patient.dob}`;
-      const treatmentHistory = patient.treatments
-        .map(t => `Date: ${t.date} ${t.time}\nRemedy: ${t.remedy || 'N/A'}\nObservations: ${t.observations}`)
-        .join('\n\n---\n\n');
-      
-      const result = await summarizeTreatmentHistory({ patientDetails, treatmentHistory });
-      setSummary(result.summary);
-
-    } catch (error) {
-      console.error("AI summary error:", error);
-      toast({
-        variant: "destructive",
-        title: "خلاصہ ناکام",
-        description: "مریض کا خلاصہ تیار نہیں کیا جا سکا۔ براہ کرم دوبارہ کوشش کریں۔",
-      });
-    } finally {
-      setIsSummarizing(false);
-    }
-  };
+  // Remove summarizeTreatmentHistory import, summary, isSummarizing, handleSummarize, and any references
+  // Remove any buttons, UI, or dialog for summarizing patient treatments
 
     const sortedTreatments = (patient.treatments || []).sort((a, b) => {
         const dateA = new Date(`${a.date}T${a.time}`);
@@ -256,37 +226,7 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
           </div>
         </div>
         
-        <div className="flex items-center gap-2 ml-6">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={handleSummarize} disabled={isSummarizing} size="icon" variant="outline">
-                    {isSummarizing ? <Loader2 className="animate-spin" /> : <BookText />}
-                    <span className="sr-only">خلاصہ بنائیں</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>خلاصہ بنائیں</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-            
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)} disabled={isDeleting}>
-                    <span className="sr-only">مریض حذف کریں</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>مریض حذف کریں</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-        </div>
+        {/* Remove the entire div for header actions: summary and patient delete button */}
       </header>
   {/* EditPatientDialog Removed */}
       <ScrollArea className="flex-1">
@@ -321,14 +261,7 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
                               treatment={treatment} 
                               onUpdateTreatment={handleUpdateTreatment} 
                             />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteTreatment(treatment.id)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {/* Remove delete button for treatments here */}
                           </div>
                         </td>
                       </tr>
@@ -371,19 +304,8 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
         </AlertDialogContent>
       </AlertDialog>
       
-      <AlertDialog open={!!summary} onOpenChange={(open) => !open && setSummary(null)}>
-        <AlertDialogContent className="max-w-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>مریض کا خلاصہ: {patient.name}</AlertDialogTitle>
-            <AlertDialogDescription className="text-foreground whitespace-pre-wrap font-body pt-4 max-h-[60vh] overflow-y-auto">
-              {summary}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>بند کریں</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Remove summarizeTreatmentHistory import, summary, isSummarizing, handleSummarize, and any references
+  // Remove any buttons, UI, or dialog for summarizing patient treatments */}
       
       <EditPatientDialog 
         patient={patient} 

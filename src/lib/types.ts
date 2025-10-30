@@ -32,3 +32,24 @@ export interface Patient {
   bloodGroup?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
   treatments?: Treatment[];
 }
+
+export type QueueStatus = 'Waiting' | 'Triage' | 'Doctor' | 'Pharmacy' | 'Done'
+
+export interface Camp {
+  id: string;
+  name: string;
+  date: string; // ISO date
+  location?: string;
+  createdBy?: string;
+}
+
+export interface QueueItem {
+  id: string;
+  patientId: string;
+  patientName?: string;
+  tokenNumber: number;
+  status: QueueStatus;
+  createdAt: string; // ISO date-time
+  campId?: string;
+  createdAtDay?: string; // YYYY-MM-DD for daily queries
+}

@@ -51,16 +51,20 @@ const formSchema = z.object({
 type EditPatientDialogProps = {
   patient: Patient;
   onUpdatePatient: (patient: Patient) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function EditPatientDialog({ patient, onUpdatePatient, open, onOpenChange }: EditPatientDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const dialogOpen = open !== undefined ? open : internalOpen;
+  const setDialogOpen = onOpenChange || setInternalOpen;
   const [ageInputMode, setAgeInputMode] = useState<"dob" | "age">(patient.dob ? "dob" : "age");
   const { toast } = useToast();
   
   // Open dialog when a global 'openEditDialog' event is dispatched (from dashboard URL param)
   useEffect(() => {
-    const handler = () => setIsOpen(true);
+    const handler = () => setInternalOpen(true);
     window.addEventListener('openEditDialog', handler);
     return () => window.removeEventListener('openEditDialog', handler);
   }, []);
@@ -113,7 +117,7 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
 
   // Reset form when patient changes or dialog opens
   useEffect(() => {
-    if (isOpen) {
+    if (dialogOpen) {
       form.reset({
         name: patient.name,
         dob: patient.dob ? new Date(patient.dob) : undefined,
@@ -123,7 +127,7 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
       });
       setAgeInputMode(patient.dob ? "dob" : "age");
     }
-  }, [patient, form, isOpen]);
+  }, [patient, form, dialogOpen]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     console.log('=== onSubmit called ===');
@@ -141,7 +145,7 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
     
     console.log('Updated patient:', updatedPatient);
     onUpdatePatient(updatedPatient);
-    setIsOpen(false);
+    setDialogOpen(false);
     toast({
       title: "Patient Updated",
       description: "Patient information has been successfully updated.",
@@ -149,22 +153,25 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
   }
 
   return (
-  <Dialog open={isOpen} onOpenChange={setIsOpen} key={patient.id}>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edit Patient</span>
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Edit patient details</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen} key={patient.id}>
+      {/* Only render trigger if using internal controls */}
+      {open === undefined && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Pencil className="h-4 w-4" />
+                  <span className="sr-only">Edit Patient</span>
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Edit patient details</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Patient</DialogTitle>
@@ -321,17 +328,14 @@ export function EditPatientDialog({ patient, onUpdatePatient }: EditPatientDialo
             />
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="secondary">
+                <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>
                   Cancel
                 </Button>
               </DialogClose>
               <Button 
                 type="submit"
                 onClick={() => {
-                  console.log('Save button clicked');
-                  console.log('Current form values:', form.getValues());
-                  console.log('Form is valid:', form.formState.isValid);
-                  console.log('Form errors:', form.formState.errors);
+                  // form submission logs
                 }}
               >
                 Save Changes

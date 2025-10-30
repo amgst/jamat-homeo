@@ -70,6 +70,7 @@ type FormData = z.infer<typeof formSchema>
 interface AddPatientDialogProps {
   onAddPatient: () => void;
   existingPatients: Patient[];
+  campId?: string;
 }
 
 const calculateAge = (birthDate: Date): number => {
@@ -78,7 +79,7 @@ const calculateAge = (birthDate: Date): number => {
 
 // Removed calculateDOBFromAge function as it was causing controlled/uncontrolled input issues
 
-export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientDialogProps) {
+export function AddPatientDialog({ onAddPatient, existingPatients, campId }: AddPatientDialogProps) {
   const [open, setOpen] = useState(false)
   const [relation, setRelation] = useState<"father" | "husband">("father")
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
@@ -115,18 +116,28 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
   }, [ageInputMode, form])
 
   const generatePatientNumber = (existingPatients: Patient[]) => {
-    // Get all existing patient numbers and find the highest number
+    if (campId) {
+      // Filter only CAMP- numbers for this camp
+      const campPatients = existingPatients.filter(p => p.patientNumber && p.patientNumber.startsWith('CAMP-'));
+      const existingNumbers = campPatients
+        .map(p => p.patientNumber)
+        .filter(num => num && num.match(/^CAMP-\d+$/i))
+        .map(num => parseInt(num!.substring(5)))
+        .filter(num => !isNaN(num));
+      const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+      const nextNumber = maxNumber + 1;
+      return `CAMP-${nextNumber}`;
+    }
+    // Regular patients
     const existingNumbers = existingPatients
       .map(p => p.patientNumber)
       .filter(num => num && num.match(/^P\d+$/i))
       .map(num => parseInt(num!.substring(1)))
-      .filter(num => !isNaN(num))
-    
-    const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0
-    const nextNumber = maxNumber + 1
-    
-    return `P${nextNumber.toString().padStart(2, '0')}`
-  }
+      .filter(num => !isNaN(num));
+    const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+    const nextNumber = maxNumber + 1;
+    return `P${nextNumber.toString().padStart(2, '0')}`;
+  };
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -147,6 +158,15 @@ export function AddPatientDialog({ onAddPatient, existingPatients }: AddPatientD
         patientNumber: generatePatientNumber(existingPatients),
         createdAt: new Date(),
         updatedAt: new Date(),
+      };
+      if (campId) {
+        patientData.campId = campId;
+      }
+      // Save age as number if present
+      if (typeof patientData.age === 'string' && patientData.age.trim()) {
+        const parsedAge = parseInt(patientData.age);
+        if (!isNaN(parsedAge)) patientData.age = parsedAge;
+        else delete patientData.age;
       }
 
       // Only include dob if it exists

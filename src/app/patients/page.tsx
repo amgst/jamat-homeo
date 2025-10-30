@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { Patient } from '@/lib/types';
-import { isAuthenticated, logout } from '@/lib/auth';
+import { isAuthenticated } from '@/lib/auth';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { Logo } from '@/components/Logo';
+import { collection, query, orderBy, deleteDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, LogOut, Pill, Stethoscope, Edit, ArrowUpDown, ArrowUp, ArrowDown, BookText, X } from 'lucide-react';
+import { Search, Stethoscope, Edit, ArrowUpDown, ArrowUp, ArrowDown, BookText, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toUrduName } from '@/lib/utils';
@@ -24,9 +26,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { EditPatientDialog } from '@/components/EditPatientDialog';
 
-export default function PatientsListPage() {
+function PatientsListPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,43 +41,56 @@ export default function PatientsListPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Patient; direction: 'asc' | 'desc' } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const patientsPerPage = 10;
+  const [patientsPerPage, setPatientsPerPage] = useState<number>(() => {
+    if (typeof window === 'undefined') return 10;
+    const saved = window.localStorage.getItem('patientsPageSize');
+    const n = saved ? parseInt(saved) : 10;
+    return [10, 25, 50, 100].includes(n) ? n : 10;
+  });
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>(() => {
+    if (typeof window === 'undefined') return 'table';
+    const saved = window.localStorage.getItem('patientsViewMode');
+    return saved === 'cards' ? 'cards' : 'table';
+  });
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
+  useEffect(() => {
+    if (!isClient) return;
+    const q = searchParams.get('search') || '';
+    if (q) setSearchQuery(q);
+  }, [isClient, searchParams]);
+
   const isAuth = isClient && isAuthenticated();
 
   useEffect(() => {
-    if (isClient) {
-      if (!isAuth) {
-        router.replace('/login');
-      } else {
-        fetchPatients();
-      }
+    if (isClient && !isAuth) {
+      router.replace('/login');
     }
   }, [isClient, isAuth, router]);
 
-  const fetchPatients = async () => {
+  useEffect(() => {
+    if (!isClient || !isAuth) return;
     setIsLoading(true);
-    try {
-      const patientsCollection = collection(db, 'patients');
-      const q = query(patientsCollection, orderBy('name'));
-      const patientsSnapshot = await getDocs(q);
+    const patientsCollection = collection(db, 'patients');
+    const q = query(patientsCollection, orderBy('name'));
+    const unsub = onSnapshot(q, (patientsSnapshot) => {
       const patientsList = patientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient));
       setPatients(patientsList);
-    } catch (error) {
-      console.error("Error fetching patients:", error);
-      toast({
-        title: "خرابی",
-        description: "مریضوں کا ڈیٹا حاصل کرنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔",
-        variant: "destructive",
-      });
-    } finally {
       setIsLoading(false);
-    }
-  };
+    }, (error) => {
+      console.error('Error fetching patients:', error);
+      toast({
+        title: 'خرابی',
+        description: 'مریضوں کا ڈیٹا حاصل کرنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+    });
+    return () => unsub();
+  }, [isClient, isAuth]);
 
   const calculateAge = (dobString: string, ageValue?: number) => {
     if (dobString) {
@@ -180,23 +197,33 @@ export default function PatientsListPage() {
 
   const totalPages = useMemo(() => {
     return Math.ceil(sortedAndFilteredPatients.length / patientsPerPage) || 1;
-  }, [sortedAndFilteredPatients]);
+  }, [sortedAndFilteredPatients, patientsPerPage]);
 
   const paginatedPatients = useMemo(() => {
     const startIndex = (currentPage - 1) * patientsPerPage;
     const endIndex = startIndex + patientsPerPage;
     return sortedAndFilteredPatients.slice(startIndex, endIndex);
-  }, [sortedAndFilteredPatients, currentPage]);
+  }, [sortedAndFilteredPatients, currentPage, patientsPerPage]);
 
   useEffect(() => {
     // Reset to first page when search or sort changes
     setCurrentPage(1);
   }, [searchQuery, sortConfig]);
 
-  const handleLogout = () => {
-    logout();
-    router.replace('/login');
-  };
+  useEffect(() => {
+    setCurrentPage(1);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('patientsPageSize', String(patientsPerPage));
+    }
+  }, [patientsPerPage]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('patientsViewMode', viewMode);
+    }
+  }, [viewMode]);
+
+  
 
   const handleDeletePatient = async () => {
     if (!patientToDelete) return;
@@ -228,6 +255,18 @@ export default function PatientsListPage() {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleUpdatePatient = async (updatedPatient: Patient) => {
+    try {
+      const { id, ...data } = updatedPatient;
+      const ref = doc(db, 'patients', id);
+      await updateDoc(ref, data as any);
+      toast({ title: 'مریض اپڈیٹ ہوا', description: 'تفصیلات محفوظ ہو گئیں۔' });
+    } catch (e) {
+      console.error('Update patient error', e);
+      toast({ variant: 'destructive', title: 'اپڈیٹ ناکام', description: 'براہ کرم دوبارہ کوشش کریں۔' });
+    }
+  };
+
   if (!isClient || !isAuth) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8 text-muted-foreground">
@@ -242,29 +281,7 @@ export default function PatientsListPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card/50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="cursor-pointer" onClick={() => router.push('/')}>
-              <Logo />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => router.push('/dashboard')}>
-                ڈیش بورڈ
-              </Button>
-              <Button variant="secondary">
-                مریض
-              </Button>
-              <Button variant="ghost" onClick={() => router.push('/medicines')}>
-                ادویات
-              </Button>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
-      </header>
+      
 
       <main className="container mx-auto px-4 py-6">
         <div className="flex justify-between items-center mb-6">
@@ -275,124 +292,170 @@ export default function PatientsListPage() {
         </div>
 
         <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="نام، آئی ڈی یا رابطہ نمبر سے مریض تلاش کریں..." 
-              className="pl-10" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="نام، آئی ڈی یا رابطہ نمبر سے مریض تلاش کریں..." 
+                className="pl-10" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">ویو</span>
+              <div className="flex rounded-md overflow-hidden border">
+                <Button type="button" variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="sm" className="rounded-none" onClick={() => setViewMode('table')}>ٹیبل</Button>
+                <Button type="button" variant={viewMode === 'cards' ? 'secondary' : 'ghost'} size="sm" className="rounded-none" onClick={() => setViewMode('cards')}>کارڈ</Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">فی صفحہ</span>
+              <Select value={String(patientsPerPage)} onValueChange={(v) => setPatientsPerPage(parseInt(v))}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('patientNumber')}>
-                  مریض آئی ڈی
-                  <span className="float-right">{getSortIcon('patientNumber')}</span>
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
-                  نام
-                  <span className="float-right">{getSortIcon('name')}</span>
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('age')}>
-                  عمر
-                  <span className="float-right">{getSortIcon('age')}</span>
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('contactNumber')}>
-                  رابطہ
-                  <span className="float-right">{getSortIcon('contactNumber')}</span>
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('sex')}>
-                  جنس
-                  <span className="float-right">{getSortIcon('sex')}</span>
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('bloodGroup')}>
-                  بلڈ گروپ
-                  <span className="float-right">{getSortIcon('bloodGroup')}</span>
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('treatments')}>
-                  علاج
-                  <span className="float-right">{getSortIcon('treatments')}</span>
-                </TableHead>
-                <TableHead className="text-right">عمل</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                // Skeleton loading rows
-                Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell className="text-right">
-                      <Skeleton className="h-8 w-16 ml-auto" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : sortedAndFilteredPatients.length === 0 ? (
+        {viewMode === 'table' ? (
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    <Stethoscope className="h-12 w-12 mx-auto mb-2" />
-                    <p className="text-lg">کوئی مریض نہیں ملا</p>
-                    <p>اپنی تلاش تبدیل کریں</p>
-                  </TableCell>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('patientNumber')}>
+                    مریض آئی ڈی
+                    <span className="float-right">{getSortIcon('patientNumber')}</span>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
+                    نام
+                    <span className="float-right">{getSortIcon('name')}</span>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('age')}>
+                    عمر
+                    <span className="float-right">{getSortIcon('age')}</span>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('contactNumber')}>
+                    رابطہ
+                    <span className="float-right">{getSortIcon('contactNumber')}</span>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('sex')}>
+                    جنس
+                    <span className="float-right">{getSortIcon('sex')}</span>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('bloodGroup')}>
+                    بلڈ گروپ
+                    <span className="float-right">{getSortIcon('bloodGroup')}</span>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('treatments')}>
+                    علاج
+                    <span className="float-right">{getSortIcon('treatments')}</span>
+                  </TableHead>
                 </TableRow>
-              ) : (
-                paginatedPatients.map((patient) => (
-                  <TableRow key={patient.id}>
-                    <TableCell className="font-medium">{patient.patientNumber || 'نامعلوم'}</TableCell>
-                    <TableCell>{toUrduName(patient.name)}</TableCell>
-                    <TableCell>{calculateAge(patient.dob || '', patient.age)}</TableCell>
-                    <TableCell>{patient.contactNumber || 'نامعلوم'}</TableCell>
-                    <TableCell>{patient.sex || 'نامعلوم'}</TableCell>
-                    <TableCell>{patient.bloodGroup || 'نامعلوم'}</TableCell>
-                    <TableCell>{patient.treatments?.length || 0}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            // Summary functionality would go here
-                            console.log("Summary button clicked for patient:", patient.id);
-                          }}
-                        >
-                          <BookText className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            // Close functionality would go here
-                            console.log("Close button clicked for patient:", patient.id);
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => router.push(`/dashboard?patientId=${patient.id}&edit=true`)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="h-8 w-16 ml-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : sortedAndFilteredPatients.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <Stethoscope className="h-12 w-12 mx-auto mb-2" />
+                      <p className="text-lg">کوئی مریض نہیں ملا</p>
+                      <p>اپنی تلاش تبدیل کریں</p>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ) : (
+                  paginatedPatients.map((patient) => (
+                    <TableRow key={patient.id}>
+                      <TableCell className="font-medium">{patient.patientNumber || 'نامعلوم'}</TableCell>
+                      <TableCell>
+                        <button className="underline-offset-2 hover:underline text-blue-700" onClick={() => router.push(`/patients/${patient.id}`)}>
+                          {toUrduName(patient.name)}
+                        </button>
+                      </TableCell>
+                      <TableCell>{calculateAge(patient.dob || '', patient.age)}</TableCell>
+                      <TableCell>{patient.contactNumber || 'نامعلوم'}</TableCell>
+                      <TableCell>{patient.sex || 'نامعلوم'}</TableCell>
+                      <TableCell>{patient.bloodGroup || 'نامعلوم'}</TableCell>
+                      <TableCell>{patient.treatments?.length || 0}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div>
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i} className="bg-card/50">
+                    <CardHeader>
+                      <Skeleton className="h-5 w-40" />
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-8 w-24" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : sortedAndFilteredPatients.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground border rounded-lg">
+                <Stethoscope className="h-12 w-12 mx-auto mb-2" />
+                <p className="text-lg">کوئی مریض نہیں ملا</p>
+                <p>اپنی تلاش تبدیل کریں</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paginatedPatients.map((patient) => (
+                  <Card key={patient.id} className="bg-card/50">
+                    <CardHeader className="flex flex-row items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.patientNumber || toUrduName(patient.name)} />}
+                        <AvatarFallback>{(patient.patientNumber || toUrduName(patient.name)).toString().slice(0,2)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <CardTitle className="text-base">
+                          <button className="underline-offset-2 hover:underline" onClick={() => router.push(`/patients/${patient.id}`)}>
+                            {toUrduName(patient.name)}
+                          </button>
+                        </CardTitle>
+                        <CardDescription className="text-xs">آئی ڈی: {patient.patientNumber || '—'}</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="text-sm text-muted-foreground">عمر: {calculateAge(patient.dob || '', patient.age)}</div>
+                      <div className="text-sm text-muted-foreground">رابطہ: {patient.contactNumber || '—'}</div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t pt-4 mt-4">
             <Button
@@ -440,5 +503,19 @@ export default function PatientsListPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function PatientsListPage() {
+  return (
+    <Suspense fallback={<div className="flex flex-col items-center justify-center h-full text-center p-8 text-muted-foreground">
+      <div className="mb-4 rounded-full bg-accent/10 p-4 text-accent">
+        <Stethoscope className="h-16 w-16 animate-pulse"/>
+      </div>
+      <h2 className="text-2xl font-headline text-foreground">مریض لوڈ ہو رہے ہیں...</h2>
+      <p className="max-w-md">براہ کرم کچھ لمحہ انتظار کریں۔</p>
+    </div>}>
+      <PatientsListPageContent />
+    </Suspense>
   );
 }

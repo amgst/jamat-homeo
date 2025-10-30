@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { treatmentSuggestion } from '@/ai/flows/treatment-suggestion';
 import {
   Dialog,
   DialogContent,
@@ -49,8 +48,6 @@ type TreatmentFormProps = {
 
 export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
   const { toast } = useToast();
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isLoadingMedicines, setIsLoadingMedicines] = useState(false);
   // Track selected medicines and their dosages
@@ -111,40 +108,6 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
     fetchMedicines();
   }, []);
 
-  const handleObservationsChange = async (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const query = event.target.value;
-    form.setValue('observations', query, { shouldValidate: true });
-
-    if (query.trim().length < 10) {
-      setSuggestions([]);
-      return;
-    }
-
-    setIsLoadingSuggestions(true);
-    try {
-      const patientDetails = `Name: ${patient.name}, DOB: ${patient.dob}`;
-      const treatmentHistory = patient.treatments?.map(t => `${t.date}: ${t.observations}`).join('\n') || "No prior treatments recorded.";
-      
-      const result = await treatmentSuggestion({
-        patientDetails,
-        treatmentContext: treatmentHistory,
-        query,
-      });
-
-      setSuggestions(result.suggestions || []);
-    } catch (error) {
-      console.error("AI suggestion error:", error);
-      toast({
-        variant: "destructive",
-        title: "AI Suggestion Failed",
-        description: "Could not fetch AI-powered suggestions. Please try again later.",
-      });
-      setSuggestions([]);
-    } finally {
-      setIsLoadingSuggestions(false);
-    }
-  };
-  
   function onSubmit(values: z.infer<typeof formSchema>) {
     // Auto-generate current date and time when saving
     const now = new Date();
@@ -169,7 +132,6 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
       dosage: "",
     });
   // No need to reset selectedMedicineIds, handled by medicineRows state
-    setSuggestions([]);
     toast({
       title: "Treatment Added",
       description: `A new treatment for ${patient.name} has been saved with current timestamp.`,
@@ -234,7 +196,24 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                       placeholder="Describe patient's condition, symptoms, etc." 
                       rows={5}
                       {...field}
-                      onChange={handleObservationsChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="remedy"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>علاج / Medicine</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter medicine(s) used..." 
+                      {...field} 
+                      value={field.value || ''}
+                      onChange={e => field.onChange(e.target.value || '')}
                     />
                   </FormControl>
                   <FormMessage />
@@ -242,57 +221,6 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
               )}
             />
              
-            {(isLoadingSuggestions || suggestions.length > 0) && (
-              <div className="space-y-2">
-                 <FormField
-                    control={form.control}
-                    name="remedy"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Suggested Remedy</FormLabel>
-                         <FormControl>
-                            <Input 
-                              placeholder="AI suggestions will appear here..." 
-                              {...field} 
-                              value={field.value || ''} // Ensure value is never undefined
-                              onChange={(e) => field.onChange(e.target.value || '')} // Ensure value is never null
-                            />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <div className="pt-2">
-                  {isLoadingSuggestions ? (
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating ideas...
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {suggestions.map((suggestion, index) => (
-                        <Button
-                          key={index}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="text-xs h-auto py-1 px-2"
-                          onClick={() => {
-                            const currentRemedies = form.getValues('remedy') || '';
-                            const newRemedy = currentRemedies ? `${currentRemedies}, ${suggestion}` : suggestion;
-                            form.setValue('remedy', newRemedy, { shouldValidate: true });
-                          }}
-                        >
-                          {suggestion}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-
             {/* Medicine Selection Modal Trigger and Selected Medicines Display */}
             <div className="space-y-2">
               <Button type="button" variant="outline" onClick={() => setShowMedicineModal(true)}>

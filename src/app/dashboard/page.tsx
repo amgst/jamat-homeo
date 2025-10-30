@@ -3,21 +3,21 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useMemo, useEffect, Suspense } from 'react';
+import { format, isSameDay } from 'date-fns';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Patient } from '@/lib/types';
-import { isAuthenticated, logout } from '@/lib/auth';
+import { isAuthenticated } from '@/lib/auth';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, query, orderBy, deleteDoc } from 'firebase/firestore';
 
 
 import { AddPatientDialog } from '@/components/AddPatientDialog';
 import { PatientDetail } from '@/components/PatientDetail';
-import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserPlus, Search, Stethoscope, LogOut, PanelLeft, ArrowUpDown, ArrowUp, ArrowDown, Pill } from 'lucide-react';
+import { Search, Stethoscope, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn, toUrduName } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,6 +46,7 @@ function DashboardPageContent() {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [currentPage, setCurrentPage] = useState(1);
     const patientsPerPage = 10;
+    const [todayQueueCount, setTodayQueueCount] = useState<number>(0);
 
     useEffect(() => {
         setIsClient(true);
@@ -91,6 +92,7 @@ function DashboardPageContent() {
                 router.replace('/login');
             } else {
                 fetchPatients();
+                fetchTodayQueueCount();
             }
         }
     }, [isClient, isAuth, router]);
@@ -146,10 +148,7 @@ function DashboardPageContent() {
         }
     };
     
-    const handleLogout = () => {
-        logout();
-        router.replace('/login');
-    };
+    
     
     const calculateAge = (dobString: string, ageValue?: number) => {
         if (dobString) {
@@ -169,6 +168,18 @@ function DashboardPageContent() {
             return ageValue;
         }
         return 'نامعلوم';
+    };
+
+    const fetchTodayQueueCount = async () => {
+        try {
+            const today = format(new Date(), 'yyyy-MM-dd');
+            const q = query(collection(db, 'campQueue'), orderBy('createdAtDay'));
+            const snap = await getDocs(q);
+            const count = snap.docs.filter(d => (d.data() as any).createdAtDay === today).length;
+            setTodayQueueCount(count);
+        } catch (e) {
+            console.warn('Failed to fetch today queue count', e);
+        }
     };
 
     const filteredAndSortedPatients = useMemo(() => {
@@ -260,53 +271,7 @@ function DashboardPageContent() {
 
     const PatientListContent = () => (
         <div className="flex flex-col bg-card/50 h-full">
-            <header className="p-4 border-b flex justify-between items-center shrink-0">
-                <div className="cursor-pointer" onClick={() => router.push('/')}>
-                    <Logo />
-                </div>
-                <div className="flex items-center gap-2">
-                  <AddPatientDialog onAddPatient={handleAddPatient} existingPatients={patients} />
-                   <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => router.push('/patients')} className="text-muted-foreground hover:text-foreground">
-                                    <PanelLeft className="h-5 w-5" />
-                                    <span className="sr-only">مریضوں کی فہرست</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                            <p>مریضوں کی فہرست</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                   <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => router.push('/medicines')} className="text-muted-foreground hover:text-foreground">
-                                    <Pill className="h-5 w-5" />
-                                    <span className="sr-only">ادویات</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                            <p>ادویات</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                   <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
-                                    <LogOut className="h-5 w-5" />
-                                    <span className="sr-only">لاگ آؤٹ</span>
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                            <p>لاگ آؤٹ</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </div>
-            </header>
+            
             
             <div className="p-4 shrink-0">
                 <div className="relative mb-3">
@@ -398,29 +363,7 @@ function DashboardPageContent() {
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="border-b bg-card/50">
-                <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <div className="cursor-pointer" onClick={() => router.push('/')}>
-                            <Logo />
-                        </div>
-                        <div className="flex gap-2">
-                            <Button variant="secondary">
-                                مریض
-                            </Button>
-                            <Button variant="ghost" onClick={() => router.push('/patients')}>
-                                مریضوں کی فہرست
-                            </Button>
-                            <Button variant="ghost" onClick={() => router.push('/medicines')}>
-                                ادویات
-                            </Button>
-                        </div>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={handleLogout}>
-                        <LogOut className="h-5 w-5" />
-                    </Button>
-                </div>
-            </header>
+            
 
             <main className="container mx-auto px-4 py-6">
                 <div className="flex justify-between items-center mb-6">
@@ -431,105 +374,64 @@ function DashboardPageContent() {
                     <AddPatientDialog onAddPatient={handleAddPatient} existingPatients={patients} />
                 </div>
 
+                {/* Google-like search at top */}
+                <div className="mb-8">
+                    <div className="max-w-2xl mx-auto">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input 
+                                placeholder="نام، آئی ڈی یا رابطہ نمبر سے تلاش کریں..." 
+                                className="pl-10 h-12 rounded-full text-lg" 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        const q = searchQuery.trim();
+                                        if (q) {
+                                            router.push(`/patients?search=${encodeURIComponent(q)}`);
+                                        } else {
+                                            router.push('/patients');
+                                        }
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Top metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div className="border rounded-lg p-4 bg-card/50">
+                        <p className="text-sm text-muted-foreground">کل مریض</p>
+                        <p className="text-2xl font-bold mt-1">{patients.length}</p>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-card/50">
+                        <p className="text-sm text-muted-foreground">آج کی رجسٹریشنز</p>
+                        <p className="text-2xl font-bold mt-1">{
+                            patients.filter(p => {
+                                const created = (p as any).createdAt;
+                                if (!created) return false;
+                                const date = typeof created === 'string' ? new Date(created) : new Date(created.seconds ? created.seconds * 1000 : created);
+                                return isSameDay(date, new Date());
+                            }).length
+                        }</p>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-card/50">
+                        <p className="text-sm text-muted-foreground">آج کا کیو</p>
+                        <p className="text-2xl font-bold mt-1">{todayQueueCount}</p>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-card/50">
+                        <p className="text-sm text-muted-foreground">منتخب مریض</p>
+                        <p className="text-2xl font-bold mt-1">{selectedPatientId ? 1 : 0}</p>
+                    </div>
+                </div>
+
+                {/* Queue overview */}
                 <div className="mb-6">
-                    <div className="relative mb-3">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                            placeholder="مریضوں کو تلاش کریں..." 
-                            className="pl-10" 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
                     
-                    <div className="flex gap-1 text-xs">
-                        <Button 
-                            variant={sortBy === 'patientNumber' ? 'secondary' : 'ghost'} 
-                            size="sm" 
-                            onClick={() => handleSort('patientNumber')}
-                            className="h-7 px-2 text-xs"
-                        >
-                            آئی ڈی {getSortIcon('patientNumber')}
-                        </Button>
-                        <Button 
-                            variant={sortBy === 'name' ? 'secondary' : 'ghost'} 
-                            size="sm" 
-                            onClick={() => handleSort('name')}
-                            className="h-7 px-2 text-xs"
-                        >
-                            نام {getSortIcon('name')}
-                        </Button>
-                        <Button 
-                            variant={sortBy === 'dateAdded' ? 'secondary' : 'ghost'} 
-                            size="sm" 
-                            onClick={() => handleSort('dateAdded')}
-                            className="h-7 px-2 text-xs"
-                        >
-                            شامل کیا گیا {getSortIcon('dateAdded')}
-                        </Button>
-                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6">
-                    <div className="space-y-4">
-                        {paginatedPatients.map((patient: Patient) => (
-                            <div key={patient.id} className={`border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
-                                selectedPatientId === patient.id ? 'bg-accent border-accent-foreground' : ''
-                            }`} onClick={() => handleSelectPatient(patient.id)}>
-                                <div className="flex items-center space-x-3">
-                                    <Avatar className="h-12 w-12">
-                                        {patient.avatarUrl && <AvatarImage src={patient.avatarUrl} alt={patient.patientNumber || toUrduName(patient.name)} />}
-                                        <AvatarFallback>{patient.patientNumber || toUrduName(patient.name).split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <h3 className="font-semibold">{toUrduName(patient.name)}</h3>
-                                        <p className="text-sm text-muted-foreground">عمر: {calculateAge(patient.dob || '', patient.age) === 'نامعلوم' ? 'نامعلوم' : `${calculateAge(patient.dob || '', patient.age)} سال`}</p>
-                                        {patient.patientNumber && <p className="text-xs text-muted-foreground">آئی ڈی: {patient.patientNumber}</p>}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        
-                        {/* Pagination Controls */}
-                        {totalPages > 1 && (
-                            <div className="flex items-center justify-between border-t pt-4">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                >
-                                    پچھلا
-                                </Button>
-                                
-                                <div className="text-sm text-muted-foreground">
-                                    صفحہ {currentPage} از {totalPages}
-                                </div>
-                                
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages}
-                                >
-                                    اگلا
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div>
-                        {selectedPatient ? (
-                            <PatientDetail key={selectedPatient.id} patient={selectedPatient} onUpdatePatient={handleUpdatePatient} onDeletePatient={handleDeletePatient} isDeleting={isDeleting} />
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-64 text-center p-8 text-muted-foreground border rounded-lg">
-                                <Stethoscope className="h-16 w-16 mb-4" />
-                                <h3 className="text-lg font-semibold">Select a patient</h3>
-                                <p>Choose a patient from the list to see their details</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                {/* Removed patients list and detail from dashboard */}
             </main>
         </div>
     );
