@@ -107,13 +107,13 @@ function PatientDetailPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-background" dir="rtl">
+      <main className="container mx-auto px-4 py-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => router.back()}>
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" />
             </Button>
             <h1 className="text-2xl font-bold">مریض کی تفصیل</h1>
           </div>
@@ -121,7 +121,7 @@ function PatientDetailPageContent() {
             <div className="flex gap-2">
               <EditPatientDialog patient={patient} onUpdatePatient={handleUpdatePatient} />
               <Button variant="outline" color="destructive" onClick={() => setShowDeleteDialog(true)} disabled={isDeleting}>
-                Remove Patient
+                مریض حذف کریں
               </Button>
             </div>
           )}

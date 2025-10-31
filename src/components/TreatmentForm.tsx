@@ -35,7 +35,7 @@ import { Loader2, Clock, Search } from 'lucide-react';
 
 const formSchema = z.object({
   observations: z.string().min(5, {
-    message: "Observations must be at least 5 characters.",
+    message: "مشاہدات کم از کم 5 حروف ہونے چاہئیں۔",
   }),
   remedy: z.string().optional(),
   dosage: z.string().optional(),
@@ -175,43 +175,27 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
 
   return (
     <Card className="shadow-md">
-      <CardHeader>
-        <CardTitle className="font-headline flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Add New Treatment
+      <CardHeader className="py-3">
+        <CardTitle className="font-headline flex items-center gap-2 text-base">
+          <Clock className="h-4 w-4" />
+          نیا علاج درج کریں
         </CardTitle>
-        <CardDescription>Log a new treatment or observation for {patient.name}. Timestamp will be added automatically when saved.</CardDescription>
+        <CardDescription className="text-xs">{patient.name} کے لئے نیا علاج یا مشاہدات درج کریں۔ محفوظ کرنے پر وقت خودکار شامل ہوگا۔</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="observations"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Observations & Notes</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Describe patient's condition, symptoms, etc." 
-                      rows={5}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="remedy"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>علاج / Medicine</FormLabel>
+                  <FormLabel>ادویات / علاج</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Enter medicine(s) used..." 
-                      {...field} 
+                    <Textarea
+                      placeholder="استعمال شدہ دوا درج کریں..."
+                      rows={4}
+                      {...field}
                       value={field.value || ''}
                       onChange={e => field.onChange(e.target.value || '')}
                     />
@@ -220,11 +204,28 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="observations"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>مشاہدات اور نوٹس</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="مریض کی حالت، علامات وغیرہ بیان کریں" 
+                      rows={4}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
              
             {/* Medicine Selection Modal Trigger and Selected Medicines Display */}
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-start-2">
               <Button type="button" variant="outline" onClick={() => setShowMedicineModal(true)}>
-                Select Medicines
+                ادویات منتخب کریں
               </Button>
               {/* Show selected medicines below button */}
               {medicineRows.filter(row => row.selected).length > 0 && (
@@ -250,14 +251,14 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
               }}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Select Medicines for Treatment</DialogTitle>
+                    <DialogTitle>علاج کے لئے ادویات منتخب کریں</DialogTitle>
                   </DialogHeader>
                   {/* Add search input to medicine selection modal */}
                   <div className="py-2">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Search medicines..."
+                        placeholder="ادویات تلاش کریں..."
                         className="pl-10"
                         value={medicineSearchQuery}
                         onChange={(e) => setMedicineSearchQuery(e.target.value)}
@@ -267,10 +268,10 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>S. No.</TableHead>
-                        <TableHead>Medicine</TableHead>
-                        <TableHead>Dosage</TableHead>
-                        <TableHead>Select</TableHead>
+                        <TableHead>نمبر</TableHead>
+                        <TableHead>دوائی</TableHead>
+                        <TableHead>خوراک</TableHead>
+                        <TableHead>انتخاب</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -281,7 +282,7 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                           <TableCell>
                             <Select value={row.dosage} onValueChange={val => handleRowDosage(row.id, val)}>
                               <SelectTrigger>
-                                <SelectValue placeholder="Dosage" />
+                                <SelectValue placeholder="خوراک" />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="OD">OD</SelectItem>
@@ -310,11 +311,11 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1}
                       >
-                        Previous
+                        پچھلا
                       </Button>
                       
                       <div className="text-sm text-muted-foreground">
-                        Page {currentPage} of {totalPages}
+                        صفحہ {currentPage} از {totalPages}
                       </div>
                       
                       <Button
@@ -323,13 +324,13 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                         disabled={currentPage === totalPages}
                       >
-                        Next
+                        اگلا
                       </Button>
                     </div>
                   )}
                   <DialogFooter>
                     <Button type="button" onClick={() => setShowMedicineModal(false)}>
-                      Done
+                      مکمل
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -338,10 +339,10 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
 
             {/* Dosage instructions removed from main form. Now set per medicine in modal. */}
             
-            <div className="flex justify-end">
+            <div className="flex justify-end md:col-span-2">
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Treatment
+                علاج محفوظ کریں
               </Button>
             </div>
           </form>

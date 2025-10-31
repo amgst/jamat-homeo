@@ -244,6 +244,7 @@ export default function CampPage() {
     return { total, male, female, ageGroups };
   }, [campPatients]);
 
+  ;
   return (
     <main className="max-w-4xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Camp Registration</h1>
@@ -321,7 +322,7 @@ export default function CampPage() {
             <div className="text-xl font-semibold">{campStats.female}</div>
           </div>
           <div className="p-3 border rounded">
-            <div className="text-xs text-muted-foreground">Kids (<18) / Adults (18-40) / Old (40+)</div>
+            <div className="text-xs text-muted-foreground">Kids (&lt;18) / Adults (18-40) / Old (40+)</div>
             <div className="text-sm font-medium">
               {campStats.ageGroups.kids} / {campStats.ageGroups.adults} / {campStats.ageGroups.old}
             </div>

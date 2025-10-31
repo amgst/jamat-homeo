@@ -177,10 +177,15 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
 
   return (
     <div className="flex flex-col h-full">
-      <header className="p-6 border-b flex items-start justify-between bg-card/50 shrink-0 max-md:hidden">
+      <header className="p-4 border-b flex items-start justify-between bg-card/50 shrink-0 max-md:hidden">
         <div className="flex-1">
           <div className="flex flex-col mb-4">
-            <h1 className="text-3xl font-bold font-headline">{patient.name}</h1>
+            <h1 className="text-3xl font-bold font-headline flex items-baseline gap-3">
+              {patient.name}
+              <span className="text-sm text-muted-foreground" title={`تاریخِ پیدائش: ${dobFormatted}`}>
+                {calculateAge(patient.dob || '', patient.age) === 'نامعلوم' ? 'نامعلوم' : `${calculateAge(patient.dob || '', patient.age)} سال`}
+              </span>
+            </h1>
             {patient.patientNumber && (
               <div className="bg-primary/10 px-3 py-1 rounded-lg mt-2 w-fit">
                 <span className="text-sm font-medium text-primary">مریض #: {patient.patientNumber}</span>
@@ -188,20 +193,7 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
             )}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">عمر</p>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <p className="font-medium cursor-pointer">{calculateAge(patient.dob || '', patient.age) === 'نامعلوم' ? 'نامعلوم' : `${calculateAge(patient.dob || '', patient.age)} سال`}</p>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>تاریخِ پیدائش: {dobFormatted}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
             
             {patient.contactNumber && (
               <div>
@@ -230,32 +222,32 @@ export const PatientDetail = ({ patient, onUpdatePatient, onDeletePatient, isDel
       </header>
   {/* EditPatientDialog Removed */}
       <ScrollArea className="flex-1">
-        <div className="p-6 space-y-8">
+        <div className="p-4 space-y-6">
           <TreatmentForm patient={patient} onAddTreatment={handleAddTreatment} />
           
           <div>
-            <h2 className="text-2xl font-bold font-headline mb-4">علاج کی تاریخ</h2>
+            <h2 className="text-xl font-bold font-headline mb-3">علاج کی تاریخ</h2>
             {sortedTreatments && sortedTreatments.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full border rounded-lg bg-background/50">
                   <thead>
                     <tr className="bg-card/50">
-                      <th className="px-4 py-2 text-left">تاریخ اور وقت</th>
-                      <th className="px-4 py-2 text-left">علاج</th>
-                      <th className="px-4 py-2 text-left">مشاہدات</th>
-                      <th className="px-4 py-2 text-left w-20">عمل</th>
+                      <th className="px-3 py-1.5 text-right">تاریخ اور وقت</th>
+                      <th className="px-3 py-1.5 text-right">علاج</th>
+                      <th className="px-3 py-1.5 text-right">مشاہدات</th>
+                      <th className="px-3 py-1.5 text-right w-20">عمل</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedTreatments.map((treatment, index) => (
                       <tr key={treatment.id || index} className="border-b">
-                        <td className="px-4 py-2">
+                        <td className="px-3 py-1.5 text-right">
                           <div>{treatment.date ? new Date(treatment.date).toLocaleDateString('ur-PK') : 'نامعلوم'}</div>
                           <div className="text-xs text-muted-foreground mt-1">{treatment.time}</div>
                         </td>
-                        <td className="px-4 py-2">{treatment.remedy || '-'}</td>
-                        <td className="px-4 py-2 whitespace-pre-wrap">{treatment.observations}</td>
-                        <td className="px-4 py-2">
+                        <td className="px-3 py-1.5 text-right">{treatment.remedy || '-'}</td>
+                        <td className="px-3 py-1.5 whitespace-pre-wrap text-right">{treatment.observations}</td>
+                        <td className="px-3 py-1.5">
                           <div className="flex items-center gap-2">
                             <EditTreatmentDialog 
                               treatment={treatment} 
