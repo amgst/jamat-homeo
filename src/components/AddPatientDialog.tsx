@@ -409,7 +409,6 @@ export function AddPatientDialog({ onAddPatient, existingPatients, campId }: Add
                       <SelectContent>
                         <SelectItem value="Male">مرد</SelectItem>
                         <SelectItem value="Female">خاتون</SelectItem>
-                        <SelectItem value="Other">دیگر</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

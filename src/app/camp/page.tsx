@@ -4,7 +4,7 @@ import { AddPatientDialog } from "@/components/AddPatientDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { db } from "@/lib/firebase";
-import { addDoc, collection, doc, getDoc, setDoc, updateDoc, query, where, getDocs, deleteDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, setDoc, updateDoc, query, where, getDocs, deleteDoc, deleteField } from "firebase/firestore";
 import type { Patient, Camp } from "@/lib/types";
 import { EditPatientDialog } from "@/components/EditPatientDialog";
 import { useRouter } from "next/navigation";
@@ -152,12 +152,30 @@ export default function CampPage() {
 
   const handleUpdatedPatient = async (updated: Patient) => {
     try {
-      await updateDoc(doc(db, 'patients', updated.id), updated);
-      setCampPatients((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+      // Remove undefined fields and immutable fields before update
+      const { id, createdAt, ...rest } = updated as any;
+      const cleaned: Record<string, any> = {};
+      Object.entries(rest).forEach(([key, value]) => {
+        if (value !== undefined) cleaned[key] = value;
+      });
+      await updateDoc(doc(db, 'patients', id), cleaned);
+      setCampPatients((prev) => prev.map((p) => p.id === id ? { ...(p as any), ...cleaned } as Patient : p));
       setEditPatient(null);
     } catch(e) {
       alert('Failed to update');
       setEditPatient(null);
+    }
+  };
+
+  const handleRemoveFromCamp = async (patientId: string) => {
+    if (!camp) return;
+    const confirmRemove = window.confirm('Remove this patient from the camp list? Patient record will remain.');
+    if (!confirmRemove) return;
+    try {
+      await updateDoc(doc(db, 'patients', patientId), { campId: deleteField() });
+      setCampPatients(prev => prev.filter(p => p.id !== patientId));
+    } catch(e) {
+      alert('Failed to remove from camp');
     }
   };
 
@@ -184,12 +202,54 @@ export default function CampPage() {
 
   const router = useRouter();
 
+  // Camp stats (total, by gender, by age bands)
+  const campStats = React.useMemo(() => {
+    const safeParseAge = (p: Patient): number | null => {
+      if (typeof (p as any).age === 'number') return (p as any).age;
+      if (typeof (p as any).age === 'string') {
+        const n = parseInt((p as any).age);
+        return isNaN(n) ? null : n;
+      }
+      if ((p as any).dob) {
+        const dobStr = (p as any).dob as string;
+        const d = new Date(dobStr);
+        if (!isNaN(d.getTime())) {
+          const today = new Date();
+          let years = today.getFullYear() - d.getFullYear();
+          const m = today.getMonth() - d.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < d.getDate())) years--;
+          return years;
+        }
+      }
+      return null;
+    };
+
+    const total = campPatients.length;
+    let male = 0, female = 0;
+    const ageGroups: Record<'kids' | 'adults' | 'old', number> = { kids: 0, adults: 0, old: 0 };
+
+    for (const p of campPatients) {
+      const sex = ((p as any).sex || '').toString().toLowerCase();
+      if (sex === 'male' || sex === 'm') male++;
+      else if (sex === 'female' || sex === 'f') female++;
+
+      const age = safeParseAge(p);
+      if (age !== null && age >= 0) {
+        if (age < 18) ageGroups.kids++;
+        else if (age <= 40) ageGroups.adults++;
+        else ageGroups.old++;
+      }
+    }
+
+    return { total, male, female, ageGroups };
+  }, [campPatients]);
+
   return (
     <main className="max-w-4xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Camp Registration</h1>
       <section className="mb-6 bg-white rounded shadow p-4">
         <h2 className="text-xl font-semibold mb-2">Camp Details</h2>
-        {(
+        <div>
           <div className="mb-3">
             <label className="mr-2 font-medium">Switch Camp:</label>
             <select className="border rounded p-2" value={selectedCampId} onChange={handleSelectCamp}>
@@ -199,40 +259,40 @@ export default function CampPage() {
               <option value="">— New Camp —</option>
             </select>
           </div>
-        )}
-        {isCampEditing ? (
-          <div className="flex flex-col md:flex-row gap-4">
-            <Input placeholder="Camp Name" name="name" value={campForm.name} onChange={handleCampChange} />
-            <Input type="date" placeholder="Date" name="date" value={campForm.date} onChange={handleCampChange} />
-            <Input placeholder="Location" name="location" value={campForm.location} onChange={handleCampChange} />
-            <Button onClick={handleSaveCamp}>Save Camp</Button>
-          </div>
-        ) : (
-    <div className="flex flex-col md:flex-row items-center gap-6">
-            <p><b>Name:</b> {camp?.name}</p>
-            <p><b>Date:</b> {camp?.date}</p>
-            <p><b>Location:</b> {camp?.location}</p>
-            <Button size="sm" variant="outline" onClick={() => setIsCampEditing(true)}>Edit</Button>
-            {/* New Camp Button */}
-            <Button size="sm" variant="secondary" onClick={() => {
-              setCamp(null);
-              setCampForm({ name: '', date: '', location: '' });
-              setIsCampEditing(true);
-            }}>
-              + نئی کیمپ بنائیں
-            </Button>
-      {/* Delete Empty Camp Button */}
-      <Button
-        size="sm"
-        variant="destructive"
-        onClick={handleDeleteCamp}
-        disabled={!camp || campPatients.length > 0}
-        title={campPatients.length > 0 ? 'Cannot delete: camp has patients' : 'Delete this empty camp'}
-      >
-        Delete Empty Camp
-      </Button>
-          </div>
-        )}
+          {isCampEditing ? (
+            <div className="flex flex-col md:flex-row gap-4">
+              <Input placeholder="Camp Name" name="name" value={campForm.name} onChange={handleCampChange} />
+              <Input type="date" placeholder="Date" name="date" value={campForm.date} onChange={handleCampChange} />
+              <Input placeholder="Location" name="location" value={campForm.location} onChange={handleCampChange} />
+              <Button onClick={handleSaveCamp}>Save Camp</Button>
+            </div>
+          ) : (
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <p><b>Name:</b> {camp?.name}</p>
+              <p><b>Date:</b> {camp?.date}</p>
+              <p><b>Location:</b> {camp?.location}</p>
+              <Button size="sm" variant="outline" onClick={() => setIsCampEditing(true)}>Edit</Button>
+              {/* New Camp Button */}
+              <Button size="sm" variant="secondary" onClick={() => {
+                setCamp(null);
+                setCampForm({ name: '', date: '', location: '' });
+                setIsCampEditing(true);
+              }}>
+                + نئی کیمپ بنائیں
+              </Button>
+              {/* Delete Empty Camp Button */}
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleDeleteCamp}
+                disabled={!camp || campPatients.length > 0}
+                title={campPatients.length > 0 ? 'Cannot delete: camp has patients' : 'Delete this empty camp'}
+              >
+                Delete Empty Camp
+              </Button>
+            </div>
+          )}
+        </div>
       </section>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Registered Camp Patients</h2>
@@ -245,6 +305,29 @@ export default function CampPage() {
           </Button>
         </div>
       </div>
+      {/* Camp summary stats */}
+      <section className="bg-white rounded shadow p-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-center">
+          <div className="p-3 border rounded">
+            <div className="text-xs text-muted-foreground">Total</div>
+            <div className="text-xl font-semibold">{campStats.total}</div>
+          </div>
+          <div className="p-3 border rounded">
+            <div className="text-xs text-muted-foreground">Male</div>
+            <div className="text-xl font-semibold">{campStats.male}</div>
+          </div>
+          <div className="p-3 border rounded">
+            <div className="text-xs text-muted-foreground">Female</div>
+            <div className="text-xl font-semibold">{campStats.female}</div>
+          </div>
+          <div className="p-3 border rounded">
+            <div className="text-xs text-muted-foreground">Kids (<18) / Adults (18-40) / Old (40+)</div>
+            <div className="text-sm font-medium">
+              {campStats.ageGroups.kids} / {campStats.ageGroups.adults} / {campStats.ageGroups.old}
+            </div>
+          </div>
+        </div>
+      </section>
       <section className="bg-white rounded shadow p-4 mb-8">
         <h3 className="font-bold mb-2">کیمپ کے مریض</h3>
         {sortedCampPatients.length ? (
@@ -268,7 +351,10 @@ export default function CampPage() {
                     </button>
                   </td>
                   <td>{p.name}</td><td>{p.contactNumber}</td><td>{p.age || '-'}</td><td>{p.sex}</td>
-                  <td><Button variant="outline" size="sm" onClick={() => setEditPatient(p)}>Edit</Button></td>
+                  <td className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setEditPatient(p)}>Edit</Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleRemoveFromCamp(p.id)}>Remove</Button>
+                  </td>
                 </tr>
               ))}
             </tbody>

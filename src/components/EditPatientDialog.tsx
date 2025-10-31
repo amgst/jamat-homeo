@@ -216,7 +216,6 @@ export function EditPatientDialog({ patient, onUpdatePatient, open, onOpenChange
                     <select {...field} className="input border rounded h-10 px-2">
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
-                      <option value="Other">Other</option>
                     </select>
                   </FormControl>
                   <FormMessage />
