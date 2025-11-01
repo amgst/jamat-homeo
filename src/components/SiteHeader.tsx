@@ -14,6 +14,7 @@ export function SiteHeader() {
     { label: "ڈیش بورڈ", href: "/dashboard" },
     { label: "مریض", href: "/patients" },
     { label: "کیمپ", href: "/camp" },
+    { label: "ڈاکٹر", href: "/doctor" },
     { label: "ادویات", href: "/medicines" },
   ];
 
