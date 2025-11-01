@@ -188,15 +188,16 @@ export default function DoctorPage() {
               return (
                 <div
                   key={patient.id}
-                  className={`p-4 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
                     isChecked 
                       ? 'bg-green-50 border-green-300' 
                       : 'bg-white border-gray-200 hover:border-primary'
                   }`}
+                  onClick={() => router.push(`/patients/${patient.id}`)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg mb-1">{patient.name}</h3>
+                      <h3 className="font-semibold text-lg mb-1 hover:underline">{patient.name}</h3>
                       {patient.patientNumber && (
                         <p className="text-sm text-muted-foreground">#{patient.patientNumber}</p>
                       )}
@@ -213,7 +214,10 @@ export default function DoctorPage() {
                     <Button
                       variant={isChecked ? "default" : "outline"}
                       size="sm"
-                      onClick={() => handleToggleChecked(patient.id, isChecked)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleChecked(patient.id, isChecked);
+                      }}
                       className={isChecked ? "bg-green-600 hover:bg-green-700" : ""}
                     >
                       {isChecked ? (
