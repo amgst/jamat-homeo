@@ -84,7 +84,7 @@ export function AddPatientDialog({ onAddPatient, existingPatients, campId }: Add
   const [relation, setRelation] = useState<"father" | "husband">("father")
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
   // Removed isUpdatingFromToggle state as it's no longer needed
-  const [ageInputMode, setAgeInputMode] = useState<"dob" | "age">("dob")
+  const [ageInputMode, setAgeInputMode] = useState<"dob" | "age">("age")
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),

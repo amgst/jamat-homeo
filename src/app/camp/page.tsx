@@ -246,14 +246,14 @@ export default function CampPage() {
 
   ;
   return (
-    <main className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Camp Registration</h1>
-      <section className="mb-6 bg-white rounded shadow p-4">
-        <h2 className="text-xl font-semibold mb-2">Camp Details</h2>
+    <main className="max-w-4xl mx-auto p-3 sm:p-4 md:p-6">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4">Camp Registration</h1>
+      <section className="mb-6 bg-white rounded shadow p-3 sm:p-4">
+        <h2 className="text-lg sm:text-xl font-semibold mb-3">Camp Details</h2>
         <div>
           <div className="mb-3">
-            <label className="mr-2 font-medium">Switch Camp:</label>
-            <select className="border rounded p-2" value={selectedCampId} onChange={handleSelectCamp}>
+            <label className="block mb-2 text-sm font-medium">Switch Camp:</label>
+            <select className="w-full border rounded p-2 text-sm sm:text-base" value={selectedCampId} onChange={handleSelectCamp}>
               {camps.map(c => (
                 <option key={c.id} value={c.id}>{(c as any).name} — {(c as any).date}</option>
               ))}
@@ -261,107 +261,184 @@ export default function CampPage() {
             </select>
           </div>
           {isCampEditing ? (
-            <div className="flex flex-col md:flex-row gap-4">
-              <Input placeholder="Camp Name" name="name" value={campForm.name} onChange={handleCampChange} />
-              <Input type="date" placeholder="Date" name="date" value={campForm.date} onChange={handleCampChange} />
-              <Input placeholder="Location" name="location" value={campForm.location} onChange={handleCampChange} />
-              <Button onClick={handleSaveCamp}>Save Camp</Button>
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <Input placeholder="Camp Name" name="name" value={campForm.name} onChange={handleCampChange} className="w-full" />
+              <Input type="date" placeholder="Date" name="date" value={campForm.date} onChange={handleCampChange} className="w-full" />
+              <Input placeholder="Location" name="location" value={campForm.location} onChange={handleCampChange} className="w-full" />
+              <Button onClick={handleSaveCamp} className="w-full sm:w-auto">Save Camp</Button>
             </div>
           ) : (
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <p><b>Name:</b> {camp?.name}</p>
-              <p><b>Date:</b> {camp?.date}</p>
-              <p><b>Location:</b> {camp?.location}</p>
-              <Button size="sm" variant="outline" onClick={() => setIsCampEditing(true)}>Edit</Button>
-              {/* New Camp Button */}
-              <Button size="sm" variant="secondary" onClick={() => {
-                setCamp(null);
-                setCampForm({ name: '', date: '', location: '' });
-                setIsCampEditing(true);
-              }}>
-                + نئی کیمپ بنائیں
-              </Button>
-              {/* Delete Empty Camp Button */}
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={handleDeleteCamp}
-                disabled={!camp || campPatients.length > 0}
-                title={campPatients.length > 0 ? 'Cannot delete: camp has patients' : 'Delete this empty camp'}
-              >
-                Delete Empty Camp
-              </Button>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 md:gap-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-wrap">
+                <p className="text-sm sm:text-base"><b>Name:</b> {camp?.name}</p>
+                <p className="text-sm sm:text-base"><b>Date:</b> {camp?.date}</p>
+                <p className="text-sm sm:text-base"><b>Location:</b> {camp?.location}</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
+                <Button size="sm" variant="outline" onClick={() => setIsCampEditing(true)} className="w-full sm:w-auto">Edit</Button>
+                {/* New Camp Button */}
+                <Button size="sm" variant="secondary" onClick={() => {
+                  setCamp(null);
+                  setCampForm({ name: '', date: '', location: '' });
+                  setIsCampEditing(true);
+                }} className="w-full sm:w-auto">
+                  + نئی کیمپ بنائیں
+                </Button>
+                {/* Delete Empty Camp Button */}
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleDeleteCamp}
+                  disabled={!camp || campPatients.length > 0}
+                  title={campPatients.length > 0 ? 'Cannot delete: camp has patients' : 'Delete this empty camp'}
+                  className="w-full sm:w-auto"
+                >
+                  Delete Empty Camp
+                </Button>
+              </div>
             </div>
           )}
         </div>
       </section>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 mb-4">
         <h2 className="text-lg font-semibold">Registered Camp Patients</h2>
-        <div className="flex gap-2">
-          <Button onClick={() => setShowAddExisting(true)} disabled={!camp}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button onClick={() => setShowAddExisting(true)} disabled={!camp} className="w-full sm:w-auto">
             Add Existing Patient
           </Button>
-          <Button onClick={() => setShowAddDialog(true)} disabled={!camp}>
+          <Button onClick={() => setShowAddDialog(true)} disabled={!camp} className="w-full sm:w-auto">
             Register New Patient
           </Button>
         </div>
       </div>
       {/* Camp summary stats */}
-      <section className="bg-white rounded shadow p-4 mb-4">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-center">
-          <div className="p-3 border rounded">
+      <section className="bg-white rounded shadow p-3 sm:p-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 text-center">
+          <div className="p-2 sm:p-3 border rounded">
             <div className="text-xs text-muted-foreground">Total</div>
-            <div className="text-xl font-semibold">{campStats.total}</div>
+            <div className="text-lg sm:text-xl font-semibold">{campStats.total}</div>
           </div>
-          <div className="p-3 border rounded">
+          <div className="p-2 sm:p-3 border rounded">
             <div className="text-xs text-muted-foreground">Male</div>
-            <div className="text-xl font-semibold">{campStats.male}</div>
+            <div className="text-lg sm:text-xl font-semibold">{campStats.male}</div>
           </div>
-          <div className="p-3 border rounded">
+          <div className="p-2 sm:p-3 border rounded">
             <div className="text-xs text-muted-foreground">Female</div>
-            <div className="text-xl font-semibold">{campStats.female}</div>
+            <div className="text-lg sm:text-xl font-semibold">{campStats.female}</div>
           </div>
-          <div className="p-3 border rounded">
-            <div className="text-xs text-muted-foreground">Kids (&lt;18) / Adults (18-40) / Old (40+)</div>
-            <div className="text-sm font-medium">
+          <div className="p-2 sm:p-3 border rounded col-span-2 md:col-span-1">
+            <div className="text-xs text-muted-foreground leading-tight">Kids (&lt;18) / Adults (18-40) / Old (40+)</div>
+            <div className="text-xs sm:text-sm font-medium mt-1">
               {campStats.ageGroups.kids} / {campStats.ageGroups.adults} / {campStats.ageGroups.old}
             </div>
           </div>
         </div>
       </section>
-      <section className="bg-white rounded shadow p-4 mb-8">
-        <h3 className="font-bold mb-2">کیمپ کے مریض</h3>
+      <section className="bg-white rounded shadow p-3 sm:p-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
+          <h3 className="font-bold">کیمپ کے مریض</h3>
+          {/* Mobile Sort Selector */}
+          <div className="md:hidden">
+            <select 
+              className="w-full border rounded p-2 text-sm"
+              value={`${sortField}-${sortDirection}`}
+              onChange={(e) => {
+                const [field, dir] = e.target.value.split('-');
+                setSortField(field as typeof sortField);
+                setSortDirection(dir as typeof sortDirection);
+              }}
+            >
+              <option value="patientNumber-asc">Sort: Number ↑</option>
+              <option value="patientNumber-desc">Sort: Number ↓</option>
+              <option value="name-asc">Sort: Name ↑</option>
+              <option value="name-desc">Sort: Name ↓</option>
+              <option value="contactNumber-asc">Sort: Contact ↑</option>
+              <option value="contactNumber-desc">Sort: Contact ↓</option>
+              <option value="age-asc">Sort: Age ↑</option>
+              <option value="age-desc">Sort: Age ↓</option>
+              <option value="sex-asc">Sort: Sex ↑</option>
+              <option value="sex-desc">Sort: Sex ↓</option>
+            </select>
+          </div>
+        </div>
         {sortedCampPatients.length ? (
-          <table className="min-w-full mb-4">
-            <thead>
-            <tr>
-              <th className="cursor-pointer" onClick={() => handleSort('patientNumber')}>Number {sortField==='patientNumber' ? (sortDirection==='asc'? '▲':'▼') : ''}</th>
-              <th className="cursor-pointer" onClick={() => handleSort('name')}>Name {sortField==='name' ? (sortDirection==='asc'? '▲':'▼') : ''}</th>
-              <th className="cursor-pointer" onClick={() => handleSort('contactNumber')}>Contact {sortField==='contactNumber' ? (sortDirection==='asc'? '▲':'▼') : ''}</th>
-              <th className="cursor-pointer" onClick={() => handleSort('age')}>Age {sortField==='age' ? (sortDirection==='asc'? '▲':'▼') : ''}</th>
-              <th className="cursor-pointer" onClick={() => handleSort('sex')}>Sex {sortField==='sex' ? (sortDirection==='asc'? '▲':'▼') : ''}</th>
-              <th>Edit</th>
-            </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full mb-4">
+                <thead>
+                <tr>
+                  <th className="cursor-pointer text-left p-2 border-b" onClick={() => handleSort('patientNumber')}>Number {sortField==='patientNumber' ? (sortDirection==='asc'? '▲':'▼') : ''}</th>
+                  <th className="cursor-pointer text-left p-2 border-b" onClick={() => handleSort('name')}>Name {sortField==='name' ? (sortDirection==='asc'? '▲':'▼') : ''}</th>
+                  <th className="cursor-pointer text-left p-2 border-b" onClick={() => handleSort('contactNumber')}>Contact {sortField==='contactNumber' ? (sortDirection==='asc'? '▲':'▼') : ''}</th>
+                  <th className="cursor-pointer text-left p-2 border-b" onClick={() => handleSort('age')}>Age {sortField==='age' ? (sortDirection==='asc'? '▲':'▼') : ''}</th>
+                  <th className="cursor-pointer text-left p-2 border-b" onClick={() => handleSort('sex')}>Sex {sortField==='sex' ? (sortDirection==='asc'? '▲':'▼') : ''}</th>
+                  <th className="text-left p-2 border-b">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                  {sortedCampPatients.map((p) => (
+                    <tr key={p.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2">
+                        <button className="underline text-blue-600 hover:text-blue-900" onClick={() => router.push(`/patients/${p.id}`)}>
+                          {p.patientNumber}
+                        </button>
+                      </td>
+                      <td className="p-2">{p.name}</td>
+                      <td className="p-2">{p.contactNumber || '-'}</td>
+                      <td className="p-2">{p.age || '-'}</td>
+                      <td className="p-2">{p.sex || '-'}</td>
+                      <td className="p-2">
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setEditPatient(p)}>Edit</Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleRemoveFromCamp(p.id)}>Remove</Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
               {sortedCampPatients.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <button className="underline text-blue-600 hover:text-blue-900" onClick={() => router.push(`/patients/${p.id}`)}>
+                <div key={p.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <button 
+                      className="text-blue-600 hover:text-blue-900 font-semibold text-sm" 
+                      onClick={() => router.push(`/patients/${p.id}`)}
+                    >
                       {p.patientNumber}
                     </button>
-                  </td>
-                  <td>{p.name}</td><td>{p.contactNumber}</td><td>{p.age || '-'}</td><td>{p.sex}</td>
-                  <td className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setEditPatient(p)}>Edit</Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleRemoveFromCamp(p.id)}>Remove</Button>
-                  </td>
-                </tr>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setEditPatient(p)} className="text-xs px-2 py-1 h-auto">Edit</Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleRemoveFromCamp(p.id)} className="text-xs px-2 py-1 h-auto">Remove</Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Name:</span>
+                      <span className="ml-2 font-medium">{p.name}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Contact:</span>
+                      <span className="ml-2">{p.contactNumber || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Age:</span>
+                      <span className="ml-2">{p.age || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Sex:</span>
+                      <span className="ml-2">{p.sex || '-'}</span>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         ) : (
-          <p className="text-gray-500">No camp patients yet.</p>
+          <p className="text-gray-500 text-center py-4">No camp patients yet.</p>
         )}
         {editPatient && (
           <EditPatientDialog 
