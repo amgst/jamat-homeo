@@ -48,9 +48,9 @@ function PatientsListPageContent() {
     return [10, 25, 50, 100].includes(n) ? n : 10;
   });
   const [viewMode, setViewMode] = useState<'table' | 'cards'>(() => {
-    if (typeof window === 'undefined') return 'table';
+    if (typeof window === 'undefined') return 'cards';
     const saved = window.localStorage.getItem('patientsViewMode');
-    return saved === 'cards' ? 'cards' : 'table';
+    return saved === 'table' ? 'table' : 'cards';
   });
 
   useEffect(() => {
