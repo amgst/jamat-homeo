@@ -30,8 +30,9 @@ import {
 
 import type { Patient, Treatment, Medicine } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { Loader2, Clock, Search } from 'lucide-react';
+import { collection, getDocs, query, orderBy, addDoc } from 'firebase/firestore';
+import { Loader2, Clock, Search, Plus } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
   observations: z.string().min(5, {
@@ -58,6 +59,12 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
   // Add pagination state for medicine modal
   const [currentPage, setCurrentPage] = useState(1);
   const medicinesPerPage = 5;
+  // Add manual medicine entry state
+  const [showAddMedicineDialog, setShowAddMedicineDialog] = useState(false);
+  const [newMedicineName, setNewMedicineName] = useState('');
+  const [newMedicineStock, setNewMedicineStock] = useState(0);
+  const [newMedicineUnit, setNewMedicineUnit] = useState('tablets');
+  const [isAddingMedicine, setIsAddingMedicine] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -173,6 +180,61 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
     setCurrentPage(1);
   }, [medicineSearchQuery]);
 
+  // Function to handle manual medicine addition
+  const handleAddMedicineManually = async () => {
+    if (!newMedicineName.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Medicine name is required.",
+      });
+      return;
+    }
+
+    setIsAddingMedicine(true);
+    try {
+      const newMedicineData = {
+        name: newMedicineName.trim(),
+        stock: newMedicineStock,
+        unit: newMedicineUnit,
+        minStockLevel: 10,
+      };
+
+      const docRef = await addDoc(collection(db, 'medicines'), newMedicineData);
+      const newMedicine: Medicine = {
+        id: docRef.id,
+        ...newMedicineData,
+      };
+
+      // Add to medicines list
+      setMedicines(prev => [...prev, newMedicine].sort((a, b) => a.name.localeCompare(b.name)));
+      
+      // Add to medicine rows and auto-select it
+      const newRow = { id: newMedicine.id, name: newMedicine.name, selected: true, dosage: '' };
+      setMedicineRows(prev => [...prev, newRow].sort((a, b) => a.name.localeCompare(b.name)));
+
+      // Reset form
+      setNewMedicineName('');
+      setNewMedicineStock(0);
+      setNewMedicineUnit('tablets');
+      setShowAddMedicineDialog(false);
+
+      toast({
+        title: "Medicine Added",
+        description: `${newMedicine.name} has been added and selected.`,
+      });
+    } catch (error) {
+      console.error("Error adding medicine:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add medicine. Please try again.",
+      });
+    } finally {
+      setIsAddingMedicine(false);
+    }
+  };
+
   return (
     <Card className="shadow-md">
       <CardHeader className="py-3">
@@ -254,7 +316,7 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                     <DialogTitle>علاج کے لئے ادویات منتخب کریں</DialogTitle>
                   </DialogHeader>
                   {/* Add search input to medicine selection modal */}
-                  <div className="py-2">
+                  <div className="py-2 space-y-2">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -264,6 +326,16 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                         onChange={(e) => setMedicineSearchQuery(e.target.value)}
                       />
                     </div>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowAddMedicineDialog(true)}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      دستی طور پر دوائی شامل کریں
+                    </Button>
                   </div>
                   <Table>
                     <TableHeader>
@@ -336,6 +408,76 @@ export function TreatmentForm({ patient, onAddTreatment }: TreatmentFormProps) {
                 </DialogContent>
               </Dialog>
             )}
+
+            {/* Manual Medicine Addition Dialog */}
+            <Dialog open={showAddMedicineDialog} onOpenChange={setShowAddMedicineDialog}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>دستی طور پر دوائی شامل کریں</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="medicineName">دوائی کا نام *</Label>
+                    <Input
+                      id="medicineName"
+                      placeholder="دوائی کا نام درج کریں..."
+                      value={newMedicineName}
+                      onChange={(e) => setNewMedicineName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="medicineStock">اسٹاک</Label>
+                      <Input
+                        id="medicineStock"
+                        type="number"
+                        value={newMedicineStock}
+                        onChange={(e) => setNewMedicineStock(Number(e.target.value))}
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="medicineUnit">یونٹ</Label>
+                      <Select value={newMedicineUnit} onValueChange={setNewMedicineUnit}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tablets">Tablets</SelectItem>
+                          <SelectItem value="capsules">Capsules</SelectItem>
+                          <SelectItem value="ml">ML</SelectItem>
+                          <SelectItem value="grams">Grams</SelectItem>
+                          <SelectItem value="bottles">Bottles</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowAddMedicineDialog(false);
+                      setNewMedicineName('');
+                      setNewMedicineStock(0);
+                      setNewMedicineUnit('tablets');
+                    }}
+                  >
+                    منسوخ کریں
+                  </Button>
+                  <Button 
+                    type="button" 
+                    onClick={handleAddMedicineManually}
+                    disabled={isAddingMedicine || !newMedicineName.trim()}
+                  >
+                    {isAddingMedicine && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    شامل کریں
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Dosage instructions removed from main form. Now set per medicine in modal. */}
             
